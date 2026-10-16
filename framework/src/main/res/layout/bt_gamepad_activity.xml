@@ -3,77 +3,140 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#101418"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/bt_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#ffffff"
-        android:textSize="16sp" />
-
+    <!-- 蓝牙开关行 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
 
-        <Button
-            android:id="@+id/bt_enable_btn"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="打开蓝牙" />
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/bt_gamepad_title"
+                android:textColor="#ffffff"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/bt_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#9a9a9a"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <Switch
+            android:id="@+id/bt_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2a2e33" />
+
+    <!-- 已配对设备 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="4dp"
+        android:paddingLeft="16dp"
+        android:paddingTop="12dp"
+        android:text="@string/bt_paired_devices"
+        android:textColor="#33b5e5"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <ListView
+        android:id="@+id/bt_paired_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:divider="#22262b"
+        android:dividerHeight="1dp" />
+
+    <!-- 可用设备（含扫描行） -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="16dp"
+        android:paddingRight="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/bt_available_devices"
+            android:textColor="#33b5e5"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/bt_scan_progress"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginRight="10dp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/bt_scan_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:text="扫描手柄" />
-
-        <Button
-            android:id="@+id/bt_disconnect_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:text="断开连接" />
-
-        <Button
-            android:id="@+id/bt_keymap_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:text="@string/bt_key_mapping" />
+            android:minHeight="36dp"
+            android:text="@string/bt_scan" />
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="点击设备 = 配对并连接（手柄需先进入配对模式）"
-        android:textColor="#888888"
-        android:textSize="12sp" />
-
     <ListView
-        android:id="@+id/bt_device_list"
+        android:id="@+id/bt_available_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="6dp"
-        android:layout_weight="1" />
+        android:layout_weight="2"
+        android:divider="#22262b"
+        android:dividerHeight="1dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2a2e33" />
+
+    <!-- 日志（默认收起） -->
+    <TextView
+        android:id="@+id/bt_log_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingLeft="16dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:text="@string/bt_show_log"
+        android:textColor="#777777"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/bt_debug"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="6dp"
-        android:layout_weight="1"
+        android:layout_height="110dp"
         android:background="#0a0c0e"
         android:fontFamily="monospace"
         android:gravity="top"
         android:padding="8dp"
         android:scrollbars="vertical"
         android:textColor="#33b5e5"
-        android:textSize="12sp" />
+        android:textSize="11sp"
+        android:visibility="gone" />
 
 </LinearLayout>

@@ -7,7 +7,6 @@ import android.os.Looper;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import nostalgia.framework.EmulatorController;
 import nostalgia.framework.utils.NLog;
@@ -27,7 +26,7 @@ public class GamepadManager {
     }
 
     public interface DebugListener {
-        /** 连接状态变化提示，UI 线程 */
+        /** 连接/输入诊断日志行，UI 线程 */
         void onStatus(String status);
 
         /** 收到原始报告（hex），UI 线程 */
@@ -35,6 +34,11 @@ public class GamepadManager {
 
         /** 解析后的状态变化，UI 线程 */
         void onState(GamepadState state);
+    }
+
+    /** 连接状态变化（仅 ConnState 翻转时回调，UI 线程） */
+    public interface ConnStateListener {
+        void onConnState(ConnState state);
     }
 
     public enum ConnState {IDLE, CONNECTING, CONNECTED, ERROR}
@@ -59,11 +63,15 @@ public class GamepadManager {
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final List<DebugListener> debugListeners = new ArrayList<>();
-    private KeySink keySink;
+    private final List<ConnStateListener> stateListeners = new ArrayList<>();
+    private volatile KeySink keySink;
     private volatile ConnState state = ConnState.IDLE;
     private volatile String status = "";
     private volatile GamepadConnection connection;
-    private GamepadState lastState = new GamepadState();
+    private volatile GamepadState lastState = new GamepadState();
+    private volatile String connectedAddr;
+    private String connectedName;
+    private String lastError;
     private Context appContext;
 
     public synchronized void init(Context ctx) {
@@ -96,9 +104,28 @@ public class GamepadManager {
         }
     }
 
+    public void addConnStateListener(ConnStateListener l) {
+        synchronized (stateListeners) {
+            stateListeners.add(l);
+        }
+    }
+
+    public void removeConnStateListener(ConnStateListener l) {
+        synchronized (stateListeners) {
+            stateListeners.remove(l);
+        }
+    }
+
+    /** 当前已连接手柄的 MAC，未连接为 null */
+    public String getConnectedAddr() {
+        return connectedAddr;
+    }
+
     /** 连接手柄（后台线程执行） */
     public synchronized void connect(android.bluetooth.BluetoothDevice device, boolean ble) {
         disconnectInternal();
+        connectedAddr = device.getAddress();
+        connectedName = safeName(device);
         setState(ConnState.CONNECTING);
         // 经典蓝牙走系统 HID host；应用内 L2CAP（ClassicGamepadConnection）在此栈上被 ERTM 阻塞
         GamepadConnection conn = ble ? new BleGamepadConnection() : new SystemHidConnection();
@@ -108,8 +135,9 @@ public class GamepadManager {
 
     public synchronized void disconnect() {
         disconnectInternal();
+        connectedAddr = null;
         setState(ConnState.IDLE);
-        postStatus("已断开");
+        postLog("已断开");
     }
 
     private void disconnectInternal() {
@@ -121,8 +149,12 @@ public class GamepadManager {
 
     /** 连接成功后由连接实现调用 */
     public void onConnected(android.bluetooth.BluetoothDevice device, boolean ble) {
+        connectedName = safeName(device);
+        if (device != null) {
+            connectedAddr = device.getAddress();
+        }
         setState(ConnState.CONNECTED);
-        postStatus("已连接: " + safeName(device));
+        postLog("已连接: " + connectedName);
         if (appContext != null && device != null) {
             SharedPreferences.Editor e =
                     appContext.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit();
@@ -133,18 +165,24 @@ public class GamepadManager {
     }
 
     public void onDisconnected(String reason) {
+        if (connection == null) {
+            return; // 旧连接的迟到回调，不能覆盖新连接状态
+        }
+        connection = null;
+        connectedAddr = null;
         setState(ConnState.IDLE);
-        postStatus("断开: " + reason);
+        postLog("断开: " + reason);
     }
 
     public void onError(String err) {
+        lastError = err;
         setState(ConnState.ERROR);
-        postStatus("错误: " + err);
+        postLog("错误: " + err);
     }
 
     /** 连接过程日志（显示在管理页调试区） */
     public void log(String msg) {
-        postStatus(msg);
+        postLog(msg);
     }
 
     private String safeName(android.bluetooth.BluetoothDevice d) {
@@ -157,8 +195,10 @@ public class GamepadManager {
 
     /** 连接实现喂入一条输入报告 */
     public void onReport(byte[] data) {
-        String hex = toHex(data);
-        postDebugRaw(hex);
+        if (!hasDebugListeners()) {
+            return;
+        }
+        postDebugRaw(toHex(data));
     }
 
     /** 连接实现喂入解析后的状态 */
@@ -184,12 +224,44 @@ public class GamepadManager {
     }
 
     private void setState(ConnState s) {
+        if (state == s) {
+            return;
+        }
         state = s;
+        switch (s) {
+            case CONNECTED: status = "已连接: " + connectedName; break;
+            case CONNECTING: status = "连接中"; break;
+            case ERROR: status = "错误: " + lastError; break;
+            default: status = ""; break;
+        }
+        if (hasStateListeners()) {
+            uiHandler.post(() -> {
+                synchronized (stateListeners) {
+                    for (ConnStateListener l : stateListeners) {
+                        l.onConnState(state);
+                    }
+                }
+            });
+        }
     }
 
-    private void postStatus(String msg) {
-        status = msg;
+    private boolean hasDebugListeners() {
+        synchronized (debugListeners) {
+            return !debugListeners.isEmpty();
+        }
+    }
+
+    private boolean hasStateListeners() {
+        synchronized (stateListeners) {
+            return !stateListeners.isEmpty();
+        }
+    }
+
+    private void postLog(String msg) {
         android.util.Log.i(TAG, msg);
+        if (!hasDebugListeners()) {
+            return;
+        }
         uiHandler.post(() -> {
             synchronized (debugListeners) {
                 for (DebugListener l : debugListeners) {
@@ -210,6 +282,9 @@ public class GamepadManager {
     }
 
     private void postDebugState(GamepadState s) {
+        if (!hasDebugListeners()) {
+            return;
+        }
         uiHandler.post(() -> {
             synchronized (debugListeners) {
                 for (DebugListener l : debugListeners) {
@@ -219,10 +294,12 @@ public class GamepadManager {
         });
     }
 
+    private static final char[] HEX = "0123456789abcdef".toCharArray();
+
     private static String toHex(byte[] b) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(b.length * 3);
         for (byte x : b) {
-            sb.append(String.format(Locale.US, "%02x ", x));
+            sb.append(HEX[(x >> 4) & 0xf]).append(HEX[x & 0xf]).append(' ');
         }
         return sb.toString().trim();
     }
@@ -233,10 +310,16 @@ public class GamepadManager {
 
     private void dispatchDiff(GamepadState oldS, GamepadState newS) {
         KeySink sink = keySink;
-        // hat → 方向
+        // hat → 方向：新旧方向集合做差分，只发真正变化的边沿（避免保持住的方向抖断）
         if (oldS.hat != newS.hat) {
-            emitHat(sink, oldS.hat, false);
-            emitHat(sink, newS.hat, true);
+            int ob = hatDirs(oldS.hat);
+            int nb = hatDirs(newS.hat);
+            int changed = ob ^ nb;
+            for (int i = 0; i < 4; i++) {
+                if ((changed >> i & 1) != 0) {
+                    emitKey(sink, dirKey(i), (nb >> i & 1) != 0);
+                }
+            }
         }
         // 左摇杆 → 方向（与 hat 合并生效：axis 也驱动方向键，摇杆优先作为方向输入）
         boolean[] oldD = axisDirs(oldS.axes[0], oldS.axes[1]);
@@ -259,24 +342,18 @@ public class GamepadManager {
         }
     }
 
-    private void emitHat(KeySink sink, int hat, boolean pressed) {
-        if (hat < 0 || hat > 7) {
-            return;
-        }
+    /** hat 值 → 方向位掩码，bit0=up bit1=right bit2=down bit3=left（同 dirKey 序） */
+    private static int hatDirs(int hat) {
         switch (hat) {
-            case 0: emitKey(sink, EmulatorController.KEY_UP, pressed); break;
-            case 1: emitKey(sink, EmulatorController.KEY_UP, pressed);
-                    emitKey(sink, EmulatorController.KEY_RIGHT, pressed); break;
-            case 2: emitKey(sink, EmulatorController.KEY_RIGHT, pressed); break;
-            case 3: emitKey(sink, EmulatorController.KEY_RIGHT, pressed);
-                    emitKey(sink, EmulatorController.KEY_DOWN, pressed); break;
-            case 4: emitKey(sink, EmulatorController.KEY_DOWN, pressed); break;
-            case 5: emitKey(sink, EmulatorController.KEY_DOWN, pressed);
-                    emitKey(sink, EmulatorController.KEY_LEFT, pressed); break;
-            case 6: emitKey(sink, EmulatorController.KEY_LEFT, pressed); break;
-            case 7: emitKey(sink, EmulatorController.KEY_LEFT, pressed);
-                    emitKey(sink, EmulatorController.KEY_UP, pressed); break;
-            default: break;
+            case 0: return 1;
+            case 1: return 1 | 2;
+            case 2: return 2;
+            case 3: return 2 | 4;
+            case 4: return 4;
+            case 5: return 4 | 8;
+            case 6: return 8;
+            case 7: return 8 | 1;
+            default: return 0;
         }
     }
 

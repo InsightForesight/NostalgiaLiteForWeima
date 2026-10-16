@@ -2,23 +2,25 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/gallery_menu_select_rom"
-        android:icon="@drawable/ic_folder"
-        android:title="@string/gallery_menu_select_rom"
+        android:id="@+id/gallery_menu_reload"
+        android:icon="@drawable/ic_reload"
+        android:title="@string/gallery_menu_reload"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/gallery_menu_bt_gamepad"
+        android:icon="@drawable/ic_bluetooth"
+        android:title="@string/bt_gamepad_title"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/gallery_menu_gamepad_status"
+        android:icon="@drawable/ic_gamepad"
+        android:title="@string/gallery_menu_gamepad"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/gallery_menu_delete"
         android:icon="@drawable/ic_delete"
         android:title="@string/gallery_menu_delete"
         app:showAsAction="ifRoom" />
-    <item
-        android:id="@+id/gallery_menu_reload"
-        android:title="@string/gallery_menu_reload"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/gallery_menu_bt_gamepad"
-        android:title="@string/bt_gamepad_title"
-        app:showAsAction="never" />
     <item
         android:id="@+id/gallery_menu_select_all"
         android:icon="@drawable/ic_select_all"

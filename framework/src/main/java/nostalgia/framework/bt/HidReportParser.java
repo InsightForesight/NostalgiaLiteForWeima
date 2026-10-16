@@ -42,8 +42,6 @@ public class HidReportParser {
 
     private final List<Field> fields = new ArrayList<>();
     private boolean hasReportIds;
-    private int keyboardPage;   // 键盘 collection 时记录其 usage page
-    private int appUsagePage;   // 应用 collection usage page
 
     public List<Field> getFields() {
         return fields;
@@ -51,10 +49,6 @@ public class HidReportParser {
 
     public boolean usesReportIds() {
         return hasReportIds;
-    }
-
-    public int getAppUsagePage() {
-        return appUsagePage;
     }
 
     /**
@@ -158,9 +152,6 @@ public class HidReportParser {
                                 collUsageStack[collDepth] = usages.isEmpty() ? -1 : usages.get(0);
                                 collPageStack[collDepth] = usagePage;
                                 collDepth++;
-                                if (collDepth == 1 && !usages.isEmpty()) {
-                                    appUsagePage = usagePage;
-                                }
                             }
                             usages.clear();
                             usagePages.clear();

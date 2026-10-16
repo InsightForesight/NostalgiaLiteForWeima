@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -41,7 +40,9 @@ import java.util.regex.Pattern;
 import nostalgia.framework.KeyboardProfile;
 import nostalgia.framework.R;
 import nostalgia.framework.base.EmulatorHolder;
+import nostalgia.framework.bt.GamepadKeyMap;
 import nostalgia.framework.controllers.KeyboardController;
+import nostalgia.framework.utils.KeyLabels;
 import nostalgia.framework.utils.NLog;
 
 /**
@@ -59,11 +60,6 @@ public class KeyboardSettingsActivity extends ScaledAppCompatActivity
     public static final String EXTRA_NEW_BOOL = "EXTRA_NEW_BOOL";
     public static final int RESULT_NAME_CANCEL = 645943;
     private static final String TAG = "KeyboardSettingsActivity";
-    private static SparseArray<String> NON_PRINTABLE_KEY_LABELS = new SparseArray<>();
-
-    static {
-        initNonPrintMap();
-    }
 
     private ListView list = null;
     private KeyboardProfile profile;
@@ -73,65 +69,16 @@ public class KeyboardSettingsActivity extends ScaledAppCompatActivity
     private boolean newProfile = false;
     private boolean deleted = false;
 
-    @SuppressLint("InlinedApi")
-    private static void initNonPrintMap() {
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_ENTER, "Enter");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_SPACE, "Space");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_DPAD_LEFT, "Left");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_DPAD_RIGHT, "Right");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_DPAD_UP, "Up");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_DPAD_DOWN, "Down");
-        NON_PRINTABLE_KEY_LABELS.put(KeyboardController.KEY_XPERIA_CIRCLE, "Circle");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_A, "A");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_B, "B");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_C, "C");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_X, "X");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_Y, "Y");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_Z, "Z");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_SELECT, "Select");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_START, "Start");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_MODE, "MODE");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_THUMBL, "THUMBL");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_THUMBR, "THUMBR");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_1, "1");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_2, "2");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_3, "3");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_4, "4");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_5, "5");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_6, "6");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_7, "7");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_8, "8");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_9, "9");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_10, "10");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_11, "11");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_12, "12");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_13, "13");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_14, "14");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_15, "15");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_16, "16");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_R1, "R1");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_R2, "R2");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_L1, "L1");
-        NON_PRINTABLE_KEY_LABELS.put(KeyEvent.KEYCODE_BUTTON_L2, "L2");
+    /** 当前编辑的是否为手柄预设（switch/xbox/ps），是则键名显示手柄物理名 */
+    private boolean isGamepadProfile() {
+        return profile != null && GamepadKeyMap.isGamepadPreset(profile.name);
     }
 
-    /** 获取按键码的显示标签 */
-    public static String getKeyLabel(int keyCode) {
-        if (keyCode == 0) {
-            return "";
-        }
-        String text = NON_PRINTABLE_KEY_LABELS.get(keyCode);
-        if (text != null) {
-            return text;
-        } else {
-            KeyEvent event = new KeyEvent(0, keyCode);
-            char ch = (char) event.getUnicodeChar();
-            if (ch != 0) {
-                return ch + "";
-            } else {
-                return "key-" + keyCode;
-            }
-        }
+    /** 按 profile 类型取键码标签：手柄预设显示物理键名，其它走 Generic.kl 标签 */
+    private String displayLabel(int keyCode) {
+        return isGamepadProfile()
+                ? GamepadKeyMap.labelForPreset(profile.name, keyCode)
+                : KeyLabels.getKeyLabel(keyCode);
     }
 
     @SuppressWarnings("deprecation")
@@ -145,6 +92,10 @@ public class KeyboardSettingsActivity extends ScaledAppCompatActivity
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
         profilesNames = KeyboardProfile.getProfilesNames(this);
+        // BUTTON_* 静态数组由 JniEmulator 构造时填充；未跑过模拟器时先触发初始化
+        if (KeyboardProfile.BUTTON_KEY_EVENT_CODES == null) {
+            EmulatorHolder.getInfo();
+        }
         list = findViewById(R.id.act_keyboard_settings_list);
         profile = KeyboardProfile.load(this, getIntent().getStringExtra(EXTRA_PROFILE_NAME));
         inverseMap.clear();
@@ -311,7 +262,7 @@ public class KeyboardSettingsActivity extends ScaledAppCompatActivity
                     }
                 }
 
-                String txt = getKeyLabel(keyCode);
+                String txt = displayLabel(keyCode);
                 if (event.getAction() == KeyEvent.ACTION_DOWN) {
                     return proccessKeyEvent(txt, dialog, keyCode, position);
                 } else {
@@ -375,7 +326,7 @@ public class KeyboardSettingsActivity extends ScaledAppCompatActivity
             if (position < KeyboardProfile.BUTTON_NAMES.length) {
                 name.setText(KeyboardProfile.BUTTON_NAMES[position]);
                 int keyCode = inverseMap.get(KeyboardProfile.BUTTON_KEY_EVENT_CODES[position]);
-                String label = getKeyLabel(keyCode);
+                String label = displayLabel(keyCode);
                 keyName.setText(label);
                 keyName.setVisibility(View.VISIBLE);
             } else {

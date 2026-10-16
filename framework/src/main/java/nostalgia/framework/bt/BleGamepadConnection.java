@@ -12,9 +12,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import nostalgia.framework.utils.NLog;
@@ -32,12 +30,8 @@ public class BleGamepadConnection extends BluetoothGattCallback implements Gamep
     private static final UUID SVC_HID = uuid16(0x1812);
     private static final UUID CHR_REPORT_MAP = uuid16(0x2A4B);
     private static final UUID CHR_REPORT = uuid16(0x2A4D);
-    private static final UUID CHR_REPORT_REF = uuid16(0x2908);
     private static final UUID CHR_PROTOCOL_MODE = uuid16(0x2A4E);
     private static final UUID DESC_CCCD = uuid16(0x2902);
-    private static final UUID SVC_DEVICE_INFO = uuid16(0x180A);
-    private static final UUID CHR_PNP_ID = uuid16(0x2A50);
-
     private static UUID uuid16(int v) {
         return UUID.fromString(String.format("0000%04x-0000-1000-8000-00805f9b34fb", v));
     }
@@ -50,8 +44,6 @@ public class BleGamepadConnection extends BluetoothGattCallback implements Gamep
     private volatile boolean closed;
 
     private HidReportParser parser;
-    /** reportId → 是否已就绪；为 null 的 id 用 0 兜底 */
-    private final Map<BluetoothGattCharacteristic, Integer> reportIds = new HashMap<>();
     private final List<BluetoothGattCharacteristic> pendingSubscribe = new ArrayList<>();
     private int bondedRetry;
 
@@ -66,6 +58,9 @@ public class BleGamepadConnection extends BluetoothGattCallback implements Gamep
     }
 
     private void doGattConnect() {
+        if (closed) {
+            return; // retryConnect 的延迟回调：期间用户已断开则不再重连
+        }
         try {
             gatt = device.connectGatt(ctx, false, this);
         } catch (SecurityException e) {
@@ -135,7 +130,6 @@ public class BleGamepadConnection extends BluetoothGattCallback implements Gamep
             return;
         }
         parser = null;
-        reportIds.clear();
         pendingSubscribe.clear();
         bondedRetry = 0;
         // 先读 Report Map
@@ -179,13 +173,6 @@ public class BleGamepadConnection extends BluetoothGattCallback implements Gamep
             if (!CHR_REPORT.equals(c.getUuid())) {
                 continue;
             }
-            // Report Reference 描述符给出 reportId/type
-            int reportId = 0;
-            BluetoothGattDescriptor ref = c.getDescriptor(CHR_REPORT_REF);
-            if (ref != null && ref.getValue() != null && ref.getValue().length >= 1) {
-                reportId = ref.getValue()[0] & 0xff;
-            }
-            reportIds.put(c, reportId);
             BluetoothGattDescriptor cccd = c.getDescriptor(DESC_CCCD);
             if (cccd == null) {
                 continue;

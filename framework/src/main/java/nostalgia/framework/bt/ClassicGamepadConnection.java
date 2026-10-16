@@ -31,6 +31,7 @@ import nostalgia.framework.utils.NLog;
  * 经典 HID 没有 GATT 的 Report Map 可用（描述符在 SDP 里，接口不公开），
  * 因此报告体走启发式解码（见 {@link #decodeClassic}），原始数据同时上报调试。
  */
+@Deprecated // 保留参考：此栈 L2CAP 被 ERTM 阻塞不可用，经典通路实际走 SystemHidConnection
 public class ClassicGamepadConnection implements GamepadConnection {
 
     private static final int PSM_CONTROL = 0x11;

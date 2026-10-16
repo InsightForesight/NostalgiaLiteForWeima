@@ -72,10 +72,14 @@ public class BtGamepadController implements EmulatorController, GamepadManager.K
 
     @Override
     public void onKey(int emuKey, boolean pressed) {
-        if (emulator == null || mapping == null || mapping.indexOfKey(emuKey) < 0) {
+        if (emulator == null || mapping == null) {
             return;
         }
-        emulator.setKeyPressed(port, mapping.get(emuKey), pressed);
+        int padKey = mapping.get(emuKey, -1);
+        if (padKey < 0) {
+            return;
+        }
+        emulator.setKeyPressed(port, padKey, pressed);
     }
 
     @Override

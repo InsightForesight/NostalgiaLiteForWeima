@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import nostalgia.framework.R;
 import nostalgia.framework.base.EmulatorActivity;
 import nostalgia.framework.bt.BluetoothGamepadActivity;
+import nostalgia.framework.bt.GamepadManager;
 import nostalgia.framework.data.GameRepository;
 import nostalgia.framework.ui.gamegallery.GalleryPagerAdapter.OnItemClickListener;
 import nostalgia.framework.ui.preferences.GeneralPreferenceActivity;
@@ -58,6 +59,10 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
     private GalleryPagerAdapter adapter;
     private boolean importing = false;
     private boolean rotateAnim = false;
+
+    /** 手柄连接状态变化时刷新菜单图标（亮/灰指示） */
+    private final GamepadManager.ConnStateListener padStateListener =
+            state -> invalidateOptionsMenu();
     private TabLayout mTabLayout;
     
     /** 后台线程池，用于数据库操作和文件处理 */
@@ -129,18 +134,33 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
         if (menu != null) {
             MenuItem deleteItem = menu.findItem(R.id.gallery_menu_delete);
             MenuItem selectAllItem = menu.findItem(R.id.gallery_menu_select_all);
-            MenuItem selectRomItem = menu.findItem(R.id.gallery_menu_select_rom);
+            MenuItem reloadItem = menu.findItem(R.id.gallery_menu_reload);
+            MenuItem btItem = menu.findItem(R.id.gallery_menu_bt_gamepad);
+            MenuItem padItem = menu.findItem(R.id.gallery_menu_gamepad_status);
             MenuItem prefItem = menu.findItem(R.id.gallery_menu_pref);
             MenuItem exitItem = menu.findItem(R.id.gallery_menu_exit);
-            
+
             if (deleteItem != null) {
                 deleteItem.setVisible(isMultiSelect);
             }
             if (selectAllItem != null) {
                 selectAllItem.setVisible(isMultiSelect);
             }
-            if (selectRomItem != null) {
-                selectRomItem.setVisible(!isMultiSelect);
+            if (reloadItem != null) {
+                reloadItem.setVisible(!isMultiSelect);
+            }
+            if (btItem != null) {
+                btItem.setVisible(!isMultiSelect);
+            }
+            if (padItem != null) {
+                // 手柄图标兼任连接状态指示：已连接高亮，未连接半透明
+                boolean connected = GamepadManager.get().getState()
+                        == GamepadManager.ConnState.CONNECTED;
+                android.graphics.drawable.Drawable ic = padItem.getIcon();
+                if (ic != null) {
+                    ic.mutate().setAlpha(connected ? 255 : 76);
+                }
+                padItem.setVisible(!isMultiSelect);
             }
             if (prefItem != null) {
                 prefItem.setVisible(!isMultiSelect);
@@ -160,14 +180,12 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
             i.putExtra(PreferenceActivity.EXTRA_NO_HEADERS, true);
             startActivity(i);
             return true;
-        } else if (itemId == R.id.gallery_menu_select_rom) {
-            openFilePicker();
-            return true;
         } else if (itemId == R.id.gallery_menu_reload) {
             // 车机无文件管理器，直接全盘扫描存储中的 ROM
             reloadGames(true, null);
             return true;
-        } else if (itemId == R.id.gallery_menu_bt_gamepad) {
+        } else if (itemId == R.id.gallery_menu_bt_gamepad
+                || itemId == R.id.gallery_menu_gamepad_status) {
             startActivity(new Intent(this, BluetoothGamepadActivity.class));
             return true;
         } else if (itemId == R.id.gallery_menu_exit) {
@@ -252,6 +270,9 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
     @Override
     protected void onResume() {
         super.onResume();
+        GamepadManager.get().init(this);
+        GamepadManager.get().addConnStateListener(padStateListener);
+        invalidateOptionsMenu();
         if (rotateAnim) {
             rotateAnim = false;
         }
@@ -273,6 +294,7 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
     @Override
     protected void onPause() {
         super.onPause();
+        GamepadManager.get().removeConnStateListener(padStateListener);
         PreferenceUtil.saveLastGalleryTab(this, pager.getCurrentItem());
     }
 

@@ -179,12 +179,6 @@
             <intent android:action="nostalgia.framework.BTGAMEPAD" />
         </Preference>
 
-        <Preference
-            android:key="pref_gamepad_mapping"
-            android:summary="@string/gm_pref_desc"
-            android:title="@string/gm_title">
-            <intent android:action="nostalgia.framework.GAMEPAD_MAPPING" />
-        </Preference>
     </PreferenceCategory>
 
     <PreferenceCategory

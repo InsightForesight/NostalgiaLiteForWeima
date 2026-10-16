@@ -34,4 +34,9 @@ public class GamepadState {
         GamepadState s = (GamepadState) o;
         return hat == s.hat && buttons == s.buttons && Arrays.equals(axes, s.axes);
     }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(axes) * 31 + hat * 31 + (int) (buttons ^ (buttons >>> 32));
+    }
 }

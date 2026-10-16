@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -20,7 +21,7 @@ import nostalgia.framework.utils.NLog;
 /**
  * 键盘/手柄映射配置，定义物理按键到虚拟手柄按键的映射关系。
  * <p>
- * 支持多种预设配置（默认、PS3手柄、Wii遥控器）以及用户自定义配置，
+ * 支持多种预设配置（默认键盘、Switch/Xbox/PS 手柄）以及用户自定义配置，
  * 配置通过 SharedPreferences 持久化存储。
  * </p>
  */
@@ -101,10 +102,11 @@ public class KeyboardProfile implements Serializable {
         if (name != null) {
             SharedPreferences pref = context.getSharedPreferences(name + KEYBOARD_PROFILE_POSTFIX,
                     Context.MODE_PRIVATE);
-            if (pref.getAll().size() != 0) {
+            Map<String, ?> all = pref.getAll();
+            if (!all.isEmpty()) {
                 KeyboardProfile profile = new KeyboardProfile();
                 profile.name = name;
-                for (Entry<String, ?> entry : pref.getAll().entrySet()) {
+                for (Entry<String, ?> entry : all.entrySet()) {
                     String key = entry.getKey();
                     Integer value = (Integer) entry.getValue();
                     int nkey = Integer.parseInt(key);
@@ -114,14 +116,9 @@ public class KeyboardProfile implements Serializable {
                 return profile;
             } else {
                 NLog.i(TAG, "empty " + name + KEYBOARD_PROFILE_POSTFIX);
-                switch (name) {
-                    case "switch":
-                    case "xbox":
-                    case "ps":
-                        return createGamepadPresetProfile(name);
-                    default:
-                        return createDefaultProfile();
-                }
+                return GamepadKeyMap.isGamepadPreset(name)
+                        ? createGamepadPresetProfile(name)
+                        : createDefaultProfile();
             }
         } else {
             return createDefaultProfile();
@@ -173,15 +170,10 @@ public class KeyboardProfile implements Serializable {
      */
     public static void restoreDefaultProfile(String name, Context context) {
         KeyboardProfile prof = null;
-        switch (name) {
-            case "default":
-                prof = createDefaultProfile();
-                break;
-            case "switch":
-            case "xbox":
-            case "ps":
-                prof = createGamepadPresetProfile(name);
-                break;
+        if ("default".equals(name)) {
+            prof = createDefaultProfile();
+        } else if (GamepadKeyMap.isGamepadPreset(name)) {
+            prof = createGamepadPresetProfile(name);
         }
         if (prof != null) {
             prof.save(context);

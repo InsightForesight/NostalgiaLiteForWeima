@@ -56,7 +56,7 @@ public class KeyboardController implements EmulatorController {
     private EmulatorActivity emulatorActivity;
     private KeyboardProfile profile;
     private Emulator emulator;
-    private String padMapKey;
+    private int padDeviceId = Integer.MIN_VALUE;
     private SparseIntArray padMap;
     private SparseIntArray keyMapping;
     private Context context;
@@ -81,8 +81,8 @@ public class KeyboardController implements EmulatorController {
     @Override
     public void onResume() {
         profile = KeyboardProfile.getSelectedProfile(gameHash, context);
-        padMapKey = null; // 手柄映射缓存失效，设置页改动立即生效
-        padMap = null;
+        padMap = null; // 手柄映射缓存失效，设置页改动立即生效
+        padDeviceId = Integer.MIN_VALUE;
         emulator.resetKeys();
         for (int i = 0; i < loadingOrSaving.length; i++) {
             loadingOrSaving[i] = false;
@@ -110,28 +110,37 @@ public class KeyboardController implements EmulatorController {
         throw new UnsupportedOperationException();
     }
 
-    /** 事件是否来自游戏手柄（而非键盘/其它输入设备）。 */
-    private static boolean isGamepadSource(KeyEvent event) {
+    /** 事件是否来自游戏手柄（而非键盘/遥控器等其它输入设备）。 */
+    public static boolean isGamepadSource(KeyEvent event) {
         int src = event.getSource();
         return (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
     }
 
     /**
-     * 解析按键映射值：手柄事件走按设备存储的映射表（GamepadKeyMap，
-     * 可在手柄设置页配置），键盘及其它设备走用户选择的 KeyboardProfile。
+     * 解析按键映射值：手柄事件按设备 vid/pid 自动选用对应预设 profile
+     * （switch/xbox/ps，即在键盘/手柄设置页编辑的那份），键盘及其它设备
+     * 走用户选择的 KeyboardProfile。
      */
     private int resolveMapValue(int keyCode, KeyEvent event) {
         if (isGamepadSource(event)) {
-            String key = GamepadKeyMap.deviceKey(event.getDevice());
-            if (padMap == null || !key.equals(padMapKey)) {
-                padMapKey = key;
-                padMap = GamepadKeyMap.load(context, key);
+            int devId = event.getDeviceId();
+            if (padMap == null || devId != padDeviceId) {
+                padDeviceId = devId;
+                padMap = KeyboardProfile.load(context, GamepadKeyMap.autoPreset(
+                        GamepadKeyMap.deviceKey(event.getDevice()))).keyMap;
             }
-            // 手柄事件只查手柄映射表（预设+用户自定义），不混键盘 profile
             return padMap.get(keyCode, -1);
         }
         return profile != null ? profile.keyMap.get(keyCode, -1) : -1;
+    }
+
+    /** BACK 键 + Alt = Xperia Circle 的兼容改写 */
+    private static int normalizeKeyCode(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.isAltPressed()) {
+            return KEY_XPERIA_CIRCLE;
+        }
+        return keyCode;
     }
 
     private void multiToKeys(int mapValue, int[] keys) {
@@ -148,12 +157,8 @@ public class KeyboardController implements EmulatorController {
         return new View(context) {
             @Override
             public boolean onKeyDown(int keyCode, KeyEvent event) {
+                keyCode = normalizeKeyCode(keyCode, event);
                 int mapValue;
-                if (keyCode == KeyEvent.KEYCODE_BACK) {
-                    if (event.isAltPressed()) {
-                        keyCode = KEY_XPERIA_CIRCLE;
-                    }
-                }
                 if ((mapValue = resolveMapValue(keyCode, event)) != -1) {
                     processKey(mapValue, true);
                     return true;
@@ -164,13 +169,8 @@ public class KeyboardController implements EmulatorController {
 
             @Override
             public boolean onKeyUp(int keyCode, KeyEvent event) {
+                keyCode = normalizeKeyCode(keyCode, event);
                 int mapValue;
-
-                if (keyCode == KeyEvent.KEYCODE_BACK) {
-                    if (event.isAltPressed()) {
-                        keyCode = KEY_XPERIA_CIRCLE;
-                    }
-                }
                 if ((mapValue = resolveMapValue(keyCode, event)) != -1) {
                     processKey(mapValue, false);
                     emulatorActivity.hideTouchController();

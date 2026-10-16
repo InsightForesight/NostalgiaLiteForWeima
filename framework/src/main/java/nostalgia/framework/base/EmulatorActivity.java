@@ -29,6 +29,7 @@ import nostalgia.framework.EmulatorRunner;
 import nostalgia.framework.R;
 import nostalgia.framework.base.GameMenu.GameMenuItem;
 import nostalgia.framework.base.GameMenu.OnGameMenuListener;
+import nostalgia.framework.controllers.KeyboardController;
 import nostalgia.framework.ui.cheats.CheatsActivity;
 import nostalgia.framework.ui.gamegallery.GameDescription;
 import nostalgia.framework.ui.gamegallery.SlotSelectionActivity;
@@ -263,10 +264,7 @@ public abstract class EmulatorActivity extends ScaledAppCompatActivity
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent ev) {
-        int src = ev.getSource();
-        boolean fromGamepad = (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
-                || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
-        if (fromGamepad) {
+        if (KeyboardController.isGamepadSource(ev)) {
             // 手柄按键只进输入控制器管线，避免 Activity 层 MENU/BACK
             // 等拦截与手柄映射重复消费同一事件
             inputManager.dispatchKeyEvent(ev);

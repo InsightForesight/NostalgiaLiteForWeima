@@ -4,7 +4,6 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
@@ -19,11 +18,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -35,6 +36,7 @@ import java.util.Map;
 
 import nostalgia.framework.R;
 import nostalgia.framework.base.ScaledAppCompatActivity;
+import nostalgia.framework.controllers.KeyboardController;
 import nostalgia.framework.utils.NLog;
 
 /**
@@ -50,19 +52,24 @@ import nostalgia.framework.utils.NLog;
  * </ul>
  */
 public class BluetoothGamepadActivity extends ScaledAppCompatActivity
-        implements GamepadManager.DebugListener {
+        implements GamepadManager.DebugListener, GamepadManager.ConnStateListener {
 
     private static final String TAG = "BtGamepadActivity";
     private static final int REQ_LOCATION = 1001;
 
     private BluetoothAdapter adapter;
     private final Map<String, BluetoothDevice> found = new LinkedHashMap<>();
-    private final List<String> rows = new ArrayList<>();
-    private final List<BluetoothDevice> rowDevices = new ArrayList<>();
-    private ArrayAdapter<String> listAdapter;
+    private final List<BluetoothDevice> paired = new ArrayList<>();
+    private final List<BluetoothDevice> available = new ArrayList<>();
+    private DeviceAdapter pairedAdapter;
+    private DeviceAdapter availableAdapter;
     private TextView statusView;
     private TextView debugView;
     private Button scanBtn;
+    private CompoundButton btSwitch;
+    private View scanProgress;
+    private TextView logToggle;
+    private final StringBuilder logBuf = new StringBuilder();
 
     private volatile boolean scanning;
 
@@ -72,8 +79,8 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice d = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if (d != null) {
-                    found.put(d.getAddress(), d);
+                // 只在发现新设备时刷新列表，避免扫描期间每个广播包都全量重建
+                if (d != null && found.put(d.getAddress(), d) == null) {
                     refreshList();
                 }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
@@ -95,7 +102,7 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
                 int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT,
                         BluetoothDevice.ERROR);
                 int key = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_KEY, -1);
-                debug("PAIRING_REQUEST " + (d == null ? "?" : nameOf(d))
+                appendLog("PAIRING_REQUEST " + (d == null ? "?" : nameOf(d))
                         + " variant=" + variant + " key=" + key);
                 try {
                     if (variant == BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION
@@ -103,13 +110,15 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
                         if (d != null) {
                             d.setPairingConfirmation(true);
                             abortBroadcast();
-                            debug("setPairingConfirmation(true) OK");
+                            appendLog("setPairingConfirmation(true) OK");
                         }
                     }
                 } catch (Throwable t) {
                     NLog.e(TAG, "pairing confirm fail", t);
-                    debug("setPairingConfirmation 失败: " + t);
+                    appendLog("setPairingConfirmation 失败: " + t);
                 }
+            } else if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                refreshAll();
             } else if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
                 BluetoothDevice d = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 int prev = intent.getIntExtra(BluetoothDevice.EXTRA_PREVIOUS_BOND_STATE, -1);
@@ -118,7 +127,7 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
                 // 4=REMOTE_DEVICE_DOWN 5=DISCOVERY_IN_PROGRESS 6=AUTH_TIMEOUT
                 // 7=REPEATED_ATTEMPTS 8=REMOTE_AUTH_CANCELED 9=REMOVED）
                 int reason = intent.getIntExtra("android.bluetooth.device.extra.REASON", -1);
-                debug("BOND " + (d == null ? "?" : nameOf(d)) + " " + bondName(prev)
+                appendLog("BOND " + (d == null ? "?" : nameOf(d)) + " " + bondName(prev)
                         + " -> " + bondName(now) + (reason >= 0 ? " reason=" + reason : ""));
                 refreshList();
             }
@@ -129,9 +138,9 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice d = result.getDevice();
-            // 配对模式下的手柄广播可能不带名字，不能按 getName() 过滤
-            if (d != null) {
-                found.put(d.getAddress(), d);
+            // 配对模式下的手柄广播可能不带名字，不能按 getName() 过滤；
+            // 同一设备的重复广播不触发刷新
+            if (d != null && found.put(d.getAddress(), d) == null) {
                 runOnUiThread(BluetoothGamepadActivity.this::refreshList);
             }
         }
@@ -139,7 +148,7 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         @Override
         public void onScanFailed(int errorCode) {
             NLog.e(TAG, "BLE scan failed: " + errorCode);
-            runOnUiThread(() -> debug("BLE 扫描失败 errorCode=" + errorCode
+            runOnUiThread(() -> appendLog("BLE 扫描失败 errorCode=" + errorCode
                     + " (1=已注册 2=内部错误 3=功能不支持 4=权限不足)"));
         }
     };
@@ -154,54 +163,67 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         statusView = findViewById(R.id.bt_status);
         debugView = findViewById(R.id.bt_debug);
         scanBtn = findViewById(R.id.bt_scan_btn);
-        Button enableBtn = findViewById(R.id.bt_enable_btn);
-        ListView list = findViewById(R.id.bt_device_list);
+        btSwitch = findViewById(R.id.bt_switch);
+        scanProgress = findViewById(R.id.bt_scan_progress);
+        logToggle = findViewById(R.id.bt_log_toggle);
+        ListView pairedList = findViewById(R.id.bt_paired_list);
+        ListView availableList = findViewById(R.id.bt_available_list);
 
-        listAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_1, rows) {
-            @NonNull
-            @Override
-            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
-                View v = super.getView(position, convertView, parent);
-                TextView tv = v.findViewById(android.R.id.text1);
-                tv.setTextColor(0xff33b5e5);
-                tv.setTextSize(16);
-                return v;
+        pairedAdapter = new DeviceAdapter(paired, true);
+        availableAdapter = new DeviceAdapter(available, false);
+        pairedList.setAdapter(pairedAdapter);
+        availableList.setAdapter(availableAdapter);
+        pairedList.setOnItemClickListener((p, v, pos, id) -> onDeviceClick(paired.get(pos)));
+        pairedList.setOnItemLongClickListener((p, v, pos, id) -> {
+            onDeviceLongClick(paired.get(pos));
+            return true;
+        });
+        availableList.setOnItemClickListener(
+                (p, v, pos, id) -> onDeviceClick(available.get(pos)));
+
+        btSwitch.setOnCheckedChangeListener((b, on) -> {
+            if (adapter == null) {
+                return;
             }
-        };
-        list.setAdapter(listAdapter);
-        list.setOnItemClickListener((p, v, pos, id) -> onDeviceClick(rowDevices.get(pos)));
-
-        enableBtn.setOnClickListener(v -> {
             try {
-                adapter.enable();
+                if (on != adapter.isEnabled()) {
+                    if (on) {
+                        adapter.enable();
+                    } else {
+                        adapter.disable();
+                    }
+                }
             } catch (SecurityException e) {
-                toast("无蓝牙权限");
+                toast(R.string.bt_no_bt_perm);
             }
         });
         scanBtn.setOnClickListener(v -> toggleScan());
-        findViewById(R.id.bt_disconnect_btn).setOnClickListener(
-                v -> GamepadManager.get().disconnect());
-        findViewById(R.id.bt_keymap_btn).setOnClickListener(
-                v -> startActivity(new Intent(this, GamepadMappingActivity.class)));
+        logToggle.setOnClickListener(v -> {
+            boolean show = debugView.getVisibility() != View.VISIBLE;
+            debugView.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) {
+                debugView.setText(logBuf);
+            }
+            logToggle.setText(show ? R.string.bt_hide_log : R.string.bt_show_log);
+        });
 
         IntentFilter f = new IntentFilter();
         f.addAction(BluetoothDevice.ACTION_FOUND);
         f.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         f.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         f.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
+        f.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(btReceiver, f);
-
-        dumpBtApiSurface();
-        enableHciSnoop();
     }
 
-    /** 调试：系统 HID 通路连上后手柄按键以 KeyEvent/MotionEvent 到达，这里直接显示 */
+    /** 调试：系统 HID 通路连上后手柄按键以 KeyEvent/MotionEvent 到达，日志区展开时显示 */
     @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent e) {
-        if (e.getDeviceId() > 0 && e.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK) {
-            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
-                debug("KEY " + android.view.KeyEvent.keyCodeToString(e.getKeyCode())
+        if (KeyboardController.isGamepadSource(e)
+                && e.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK) {
+            if (isLogVisible() && e.getAction() == android.view.KeyEvent.ACTION_DOWN
+                    && e.getRepeatCount() == 0) {
+                appendLog("KEY " + android.view.KeyEvent.keyCodeToString(e.getKeyCode())
                         + " dev=" + e.getDeviceId() + " src=0x"
                         + Integer.toHexString(e.getSource()));
             }
@@ -213,14 +235,22 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
     @Override
     public boolean dispatchGenericMotionEvent(android.view.MotionEvent e) {
         if ((e.getSource() & android.view.InputDevice.SOURCE_JOYSTICK) != 0) {
-            debug(String.format(Locale.US, "AXIS x=%.2f y=%.2f hatx=%.1f haty=%.1f dev=%d",
-                    e.getAxisValue(android.view.MotionEvent.AXIS_X),
-                    e.getAxisValue(android.view.MotionEvent.AXIS_Y),
-                    e.getAxisValue(android.view.MotionEvent.AXIS_HAT_X),
-                    e.getAxisValue(android.view.MotionEvent.AXIS_HAT_Y), e.getDeviceId()));
+            if (isLogVisible()) {
+                appendLog(String.format(Locale.US,
+                        "AXIS x=%.2f y=%.2f hatx=%.1f haty=%.1f dev=%d",
+                        e.getAxisValue(android.view.MotionEvent.AXIS_X),
+                        e.getAxisValue(android.view.MotionEvent.AXIS_Y),
+                        e.getAxisValue(android.view.MotionEvent.AXIS_HAT_X),
+                        e.getAxisValue(android.view.MotionEvent.AXIS_HAT_Y),
+                        e.getDeviceId()));
+            }
             return true;
         }
         return super.dispatchGenericMotionEvent(e);
+    }
+
+    private boolean isLogVisible() {
+        return debugView.getVisibility() == View.VISIBLE;
     }
 
     private static String bondName(int s) {
@@ -232,50 +262,22 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         }
     }
 
-    /** 调试：反射开启 HCI snoop（BLUETOOTH_ADMIN 即可），输出到 bt_stack.conf 指定文件 */
-    private void enableHciSnoop() {
-        try {
-            java.lang.reflect.Method m =
-                    BluetoothAdapter.class.getMethod("configHciSnoopLog", boolean.class);
-            Object r = m.invoke(adapter, true);
-            debug("HCI snoop 开启: " + r);
-        } catch (Throwable t) {
-            debug("HCI snoop 开启失败: " + t);
-        }
-    }
-
-    /** 反射 dump 框架蓝牙 API 面，便于确认 MTK 栈支持哪些隐藏 L2CAP 接口 */
-    private void dumpBtApiSurface() {
-        try {
-            StringBuilder sb = new StringBuilder("API: ");
-            for (java.lang.reflect.Method m : BluetoothAdapter.class.getDeclaredMethods()) {
-                String n = m.getName();
-                if (n.toLowerCase().contains("l2cap") || n.toLowerCase().contains("listen")) {
-                    sb.append(n).append("() ");
-                }
-            }
-            sb.append("| ServerSocket ctor:");
-            for (java.lang.reflect.Constructor<?> c :
-                    Class.forName("android.bluetooth.BluetoothServerSocket").getDeclaredConstructors()) {
-                sb.append(" (").append(c.getParameterTypes().length).append("arg)");
-            }
-            debug(sb.toString());
-        } catch (Throwable t) {
-            debug("API dump 失败: " + t);
-        }
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
         GamepadManager.get().addDebugListener(this);
+        GamepadManager.get().addConnStateListener(this);
         refreshAll();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        // 页面退到后台即停扫，避免 inquiry+BLE 循环耗电
+        stopScan();
+        updateButtons();
         GamepadManager.get().removeDebugListener(this);
+        GamepadManager.get().removeConnStateListener(this);
     }
 
     @Override
@@ -302,11 +304,11 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
 
     private void startScan() {
         if (adapter == null) {
-            toast("设备无蓝牙");
+            toast(R.string.bt_no_bt_device);
             return;
         }
         if (!adapter.isEnabled()) {
-            toast("请先打开蓝牙");
+            toast(R.string.bt_enable_first);
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -316,24 +318,24 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
             return;
         }
         if (!isLocationOn()) {
-            toast("系统定位服务未开启，蓝牙扫描需要定位（Android 6 限制）");
+            toast(R.string.bt_location_off);
         }
         found.clear();
         refreshList();
         try {
             boolean inq = adapter.startDiscovery();
-            debug("经典扫描已启动: " + inq);
+            appendLog("经典扫描已启动: " + inq);
             BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
             if (scanner != null) {
                 scanner.startScan(bleScanCallback);
-                debug("BLE 扫描已启动");
+                appendLog("BLE 扫描已启动");
             } else {
-                debug("BLE 扫描器不可用（蓝牙未就绪?）");
+                appendLog("BLE 扫描器不可用（蓝牙未就绪?）");
             }
             scanning = true;
             updateButtons();
         } catch (SecurityException e) {
-            toast("缺少蓝牙/定位权限: " + e.getMessage());
+            toast(R.string.bt_missing_perm);
         }
     }
 
@@ -378,16 +380,42 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         stopScan();
         try {
             if (d.getBondState() != BluetoothDevice.BOND_BONDED) {
-                toast("配对中: " + nameOf(d));
+                toast(getString(R.string.bt_pairing, nameOf(d)));
                 d.createBond();
-                // 配对广播回来后由用户再点一次连接，或直接尝试连接
             }
             boolean ble = d.getType() == BluetoothDevice.DEVICE_TYPE_LE
                     || d.getType() == BluetoothDevice.DEVICE_TYPE_DUAL;
             GamepadManager.get().connect(d, ble);
-            toast("连接中: " + nameOf(d) + (ble ? " (BLE)" : " (经典)"));
+            refreshList();
+            toast(getString(R.string.bt_connecting, nameOf(d))
+                    + (ble ? " (BLE)" : getString(R.string.bt_kind_classic)));
         } catch (SecurityException e) {
-            toast("缺少蓝牙权限");
+            toast(R.string.bt_missing_perm);
+        }
+    }
+
+    /** 长按已配对设备：断开连接 / 取消配对 */
+    private void onDeviceLongClick(BluetoothDevice d) {
+        String[] items = {getString(R.string.bt_disconnect),
+                getString(R.string.bt_unpair)};
+        new AlertDialog.Builder(this)
+                .setTitle(nameOf(d))
+                .setItems(items, (dlg, which) -> {
+                    if (which == 0) {
+                        GamepadManager.get().disconnect();
+                    } else {
+                        unpair(d);
+                    }
+                    refreshList();
+                }).show();
+    }
+
+    private void unpair(BluetoothDevice d) {
+        try {
+            d.getClass().getMethod("removeBond").invoke(d);
+            toast(getString(R.string.bt_unpaired, nameOf(d)));
+        } catch (Throwable t) {
+            toast(getString(R.string.bt_unpair_failed) + ": " + t);
         }
     }
 
@@ -409,49 +437,48 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
     }
 
     private void updateButtons() {
-        scanBtn.setText(scanning ? "停止扫描" : "扫描手柄");
+        scanBtn.setText(scanning ? R.string.bt_stop_scan : R.string.bt_scan);
+        scanProgress.setVisibility(scanning ? View.VISIBLE : View.GONE);
+        if (btSwitch != null && adapter != null) {
+            btSwitch.setChecked(adapter.isEnabled());
+        }
         updateStatus();
     }
 
     private void updateStatus() {
         StringBuilder sb = new StringBuilder();
         if (adapter == null) {
-            sb.append("无蓝牙适配器");
+            sb.append(getString(R.string.bt_no_adapter));
+        } else if (!adapter.isEnabled()) {
+            sb.append(getString(R.string.bt_off));
         } else {
-            sb.append(adapter.isEnabled() ? "蓝牙: 开" : "蓝牙: 关");
-            try {
-                // 20=不可见不可连 21=可连接 23=可连接+可发现
-                sb.append(" scanMode=").append(adapter.getScanMode());
-            } catch (SecurityException ignored) {
+            sb.append(getString(R.string.bt_on));
+            String g = GamepadManager.get().getStatus();
+            if (g != null && g.length() > 0) {
+                sb.append(" · ").append(getString(R.string.bt_pad_state, g));
             }
         }
-        if (scanning) {
-            sb.append("   扫描中(").append(found.size()).append(")");
-        }
-        sb.append("   手柄: ").append(GamepadManager.get().getStatus());
         statusView.setText(sb.toString());
     }
 
-    /** 追加一行调试信息到下方日志区 */
-    private void debug(String msg) {
-        android.util.Log.i(TAG, msg);
-        String txt = msg + "\n" + debugView.getText().toString();
-        if (txt.length() > 2000) {
-            txt = txt.substring(0, 2000);
+    /** 追加一行调试信息（新行在前，上限 2000 字符），日志区可见时刷新显示 */
+    private void appendLog(String line) {
+        android.util.Log.i(TAG, line);
+        logBuf.insert(0, line + '\n');
+        if (logBuf.length() > 2000) {
+            logBuf.setLength(2000);
         }
-        debugView.setText(txt);
+        if (isLogVisible()) {
+            debugView.setText(logBuf);
+        }
     }
 
     private void refreshList() {
-        rows.clear();
-        rowDevices.clear();
-        if (adapter != null) {
+        paired.clear();
+        available.clear();
+        if (adapter != null && adapter.isEnabled()) {
             try {
-                for (BluetoothDevice d : adapter.getBondedDevices()) {
-                    rows.add("已配对  " + nameOf(d) + "  " + typeName(d)
-                            + (found.containsKey(d.getAddress()) ? "  [本次扫描到]" : ""));
-                    rowDevices.add(d);
-                }
+                paired.addAll(adapter.getBondedDevices());
             } catch (SecurityException ignored) {
             }
         }
@@ -462,64 +489,97 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
                 }
             } catch (SecurityException ignored) {
             }
-            rows.add("新设备  " + nameOf(d) + "  " + typeName(d));
-            rowDevices.add(d);
+            available.add(d);
         }
-        listAdapter.notifyDataSetChanged();
+        pairedAdapter.notifyDataSetChanged();
+        availableAdapter.notifyDataSetChanged();
         updateStatus();
+    }
+
+    /** 设备行适配器：名称 + 地址/类型，已配对行右侧显示连接状态 */
+    private class DeviceAdapter extends ArrayAdapter<BluetoothDevice> {
+        private final boolean showState;
+
+        DeviceAdapter(List<BluetoothDevice> items, boolean showState) {
+            super(BluetoothGamepadActivity.this, R.layout.bt_device_item, items);
+            this.showState = showState;
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+            View v = convertView == null ? getLayoutInflater()
+                    .inflate(R.layout.bt_device_item, parent, false) : convertView;
+            BluetoothDevice d = getItem(position);
+            if (d == null) {
+                return v;
+            }
+            ((TextView) v.findViewById(R.id.bt_device_name)).setText(nameOf(d));
+            ((TextView) v.findViewById(R.id.bt_device_info))
+                    .setText(typeName(d) + " · " + d.getAddress());
+            TextView state = v.findViewById(R.id.bt_device_state);
+            if (showState && d.getAddress().equals(GamepadManager.get().getConnectedAddr())
+                    && GamepadManager.get().getState() == GamepadManager.ConnState.CONNECTED) {
+                state.setText(R.string.bt_connected);
+            } else {
+                state.setText("");
+            }
+            return v;
+        }
     }
 
     private String typeName(BluetoothDevice d) {
         try {
-            int devClass = d.getBluetoothClass() == null ? -1
-                    : d.getBluetoothClass().getDeviceClass();
-            String major = "";
             BluetoothClass bc = d.getBluetoothClass();
-            if (bc != null && bc.getMajorDeviceClass() == BluetoothClass.Device.Major.PERIPHERAL) {
-                major = "外设";
-            }
-            String t;
+            String major = bc != null
+                    && bc.getMajorDeviceClass() == BluetoothClass.Device.Major.PERIPHERAL
+                    ? getString(R.string.bt_dev_peripheral) : "";
+            int res;
             switch (d.getType()) {
-                case BluetoothDevice.DEVICE_TYPE_LE: t = "BLE"; break;
-                case BluetoothDevice.DEVICE_TYPE_DUAL: t = "双模"; break;
-                default: t = "经典"; break;
+                case BluetoothDevice.DEVICE_TYPE_LE: res = R.string.bt_kind_ble; break;
+                case BluetoothDevice.DEVICE_TYPE_DUAL: res = R.string.bt_dev_dual; break;
+                default: res = R.string.bt_dev_classic; break;
             }
-            return major + t;
+            String t = getString(res).trim();
+            return major.isEmpty() ? t : major + " " + t;
         } catch (SecurityException e) {
             return "?";
         }
+    }
+
+    private void toast(int resId) {
+        Toast.makeText(this, resId, Toast.LENGTH_SHORT).show();
     }
 
     private void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
-    /* ---------------- GamepadManager.DebugListener ---------------- */
+    /* ---------------- GamepadManager 回调 ---------------- */
+
+    /** 连接状态翻转：刷新状态栏与"已连接"徽标 */
+    @Override
+    public void onConnState(GamepadManager.ConnState state) {
+        updateStatus();
+        if (pairedAdapter != null) {
+            pairedAdapter.notifyDataSetChanged();
+        }
+    }
 
     @Override
     public void onStatus(String status) {
         updateStatus();
-        debug(status); // 连接过程所有状态也进日志区
+        appendLog(status);
     }
 
     @Override
     public void onRawReport(String hex) {
-        String s = "RAW " + hex + "\n" + debugView.getText().toString();
-        if (s.length() > 2000) {
-            s = s.substring(0, 2000);
-        }
-        debugView.setText(s);
+        appendLog("RAW " + hex);
     }
 
     @Override
     public void onState(GamepadState s) {
-        String line = String.format(Locale.US,
-                "axes=%d,%d,%d,%d hat=%d buttons=%08x",
-                s.axes[0], s.axes[1], s.axes[2], s.axes[3], s.hat, s.buttons);
-        String txt = line + "\n" + debugView.getText().toString();
-        if (txt.length() > 2000) {
-            txt = txt.substring(0, 2000);
-        }
-        debugView.setText(txt);
+        appendLog(String.format(Locale.US, "axes=%d,%d,%d,%d hat=%d buttons=%08x",
+                s.axes[0], s.axes[1], s.axes[2], s.axes[3], s.hat, s.buttons));
     }
 }

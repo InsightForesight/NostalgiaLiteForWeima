@@ -33,9 +33,37 @@
     <string name="act_cheats_dialog_save">保存</string>
     <string name="app_name">模拟器</string>
     <string name="gallery_menu_pref">设置</string>
-    <string name="bt_gamepad_title">蓝牙手柄</string>
+    <string name="bt_gamepad_title">蓝牙</string>
+    <string name="bt_paired_devices">已配对设备</string>
+    <string name="bt_available_devices">可用设备</string>
+    <string name="bt_scan">扫描</string>
+    <string name="bt_stop_scan">停止</string>
+    <string name="bt_connected">已连接</string>
+    <string name="bt_disconnect">断开连接</string>
+    <string name="bt_unpair">取消配对</string>
+    <string name="bt_show_log">显示日志</string>
+    <string name="bt_hide_log">收起日志</string>
     <string name="bt_gamepad_pref_desc">搜索、配对并连接蓝牙手柄</string>
+    <string name="bt_no_adapter">无蓝牙适配器</string>
+    <string name="bt_on">已开启</string>
+    <string name="bt_off">已关闭</string>
+    <string name="bt_pad_state">手柄: %1$s</string>
+    <string name="bt_no_bt_device">设备无蓝牙</string>
+    <string name="bt_enable_first">请先打开蓝牙</string>
+    <string name="bt_location_off">系统定位服务未开启，蓝牙扫描需要定位（Android 6 限制）</string>
+    <string name="bt_no_bt_perm">无蓝牙权限</string>
+    <string name="bt_missing_perm">缺少蓝牙/定位权限</string>
+    <string name="bt_pairing">配对中: %1$s</string>
+    <string name="bt_connecting">连接中: %1$s</string>
+    <string name="bt_unpaired">已取消配对: %1$s</string>
+    <string name="bt_unpair_failed">取消配对失败</string>
+    <string name="bt_kind_ble">BLE</string>
+    <string name="bt_kind_classic">（经典）</string>
+    <string name="bt_dev_peripheral">外设</string>
+    <string name="bt_dev_dual">双模</string>
+    <string name="bt_dev_classic">经典</string>
     <string name="gallery_menu_reload">在设备上搜索ROM</string>
+    <string name="gallery_menu_gamepad">手柄</string>
     <string name="gallery_menu_remote_control">远程控制</string>
     <string name="gallery_menu_wifi_off">打开wifi控制</string>
     <string name="gallery_menu_wifi_on">关闭wifi控制</string>
@@ -119,8 +147,6 @@
     <string name="now_loading">正在加载,请稍后…</string>
 
     <!-- File picker -->
-    <string name="gallery_menu_select_rom">选择ROM文件</string>
-    <string name="gallery_select_rom_title">选择ROM文件</string>
     <string name="gallery_importing_rom">正在导入ROM…</string>
     <string name="gallery_rom_import_success">ROM导入成功！</string>
     <string name="gallery_rom_import_failed">ROM导入失败</string>
@@ -139,12 +165,4 @@
     <string name="gallery_play_count">已玩 %d 次</string>
     <string name="gallery_last_played">最后玩过：%s</string>
     <string name="gallery_never_played">从未玩过</string>
-    <string name="gm_title">手柄按键映射</string>
-    <string name="gm_pref_desc">Switch / Xbox / PS 预设方案与逐键自定义</string>
-    <string name="gm_preset_title">按键布局方案</string>
-    <string name="gm_device_label">正在配置：%s</string>
-    <string name="gm_no_device">通用手柄（未检测到手柄连接）</string>
-    <string name="gm_press_key">请按下手柄上要绑定到「%s」的按键</string>
-    <string name="gm_reset_default">恢复默认</string>
-    <string name="bt_key_mapping">按键映射</string>
 </resources>

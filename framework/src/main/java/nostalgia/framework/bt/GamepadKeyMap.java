@@ -1,59 +1,36 @@
 package nostalgia.framework.bt;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.SparseIntArray;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 
-import java.util.Map;
-
 import nostalgia.framework.EmulatorController;
 import nostalgia.framework.controllers.KeyboardController;
+import nostalgia.framework.utils.KeyLabels;
 
 /**
- * 手柄按键映射（按设备型号存储）。
+ * 手柄按键映射的辅助层。
  * <p>
- * 系统 HID 通路下，手柄按键以 Android KeyEvent 到达；不同手柄的物理键
- * 对应的 keyCode 差异很大（如 Pro Controller 经 Generic.kl 后严重错位），
- * 因此映射按设备 vendorId/productId 分组持久化，同类手柄共用一份。
+ * 实际映射数据存于 {@link nostalgia.framework.KeyboardProfile}（预设名
+ * switch/xbox/ps，可在键盘/手柄设置页编辑）；本类只负责：
+ * <ul>
+ *   <li>按 InputDevice 的 vid/pid 计算设备分组并自动选择预设</li>
+ *   <li>预设表（presetTable）——KeyboardProfile 预设的单一数据源</li>
+ *   <li>物理键显示名（Pro Controller 键码与键名错位，直接显示印刷键名）</li>
+ * </ul>
+ * 方向键（十字键 HAT 的 DPAD_* 与左摇杆斜向）为预设内置，左摇杆由
+ * KeyboardController 的摇杆转方向逻辑处理。
  * </p>
- * 每张映射表 = 预设方案（switch/xbox/ps 三选一，按设备自动识别）
- * + 用户自定义覆盖；方向键（十字键/HAT/摇杆，含斜向）为内置预设，
- * 不参与用户绑定。
  */
 public class GamepadKeyMap {
 
-    private static final String PREF_PREFIX = "gamepad_keys_";
-    private static final String KEY_PRESET = "_preset";
-
-    /** 预设方案标识 */
+    /** 预设方案标识（与 KeyboardProfile 预设同名） */
     public static final String PRESET_SWITCH = "switch";
     public static final String PRESET_XBOX = "xbox";
     public static final String PRESET_PS = "ps";
 
-    public static final String[] PRESETS = {PRESET_SWITCH, PRESET_XBOX, PRESET_PS};
-    public static final String[] PRESET_LABELS = {"Switch", "Xbox", "PlayStation"};
-
-    /** 可由用户绑定的模拟器功能码（顺序即设置页行顺序；方向键内置不列出） */
-    public static final int[] FUNCTIONS = {
-            EmulatorController.KEY_A,
-            EmulatorController.KEY_B,
-            EmulatorController.KEY_A_TURBO,
-            EmulatorController.KEY_B_TURBO,
-            EmulatorController.KEY_SELECT,
-            EmulatorController.KEY_START,
-            KeyboardController.KEY_FAST_FORWARD,
-            KeyboardController.KEY_MENU,
-            KeyboardController.KEY_BACK,
-    };
-
-    /** 与 {@link #FUNCTIONS} 一一对应的功能名 */
-    public static final String[] FUNCTION_NAMES = {
-            "A", "B", "连发 A", "连发 B",
-            "SELECT", "START",
-            "快进", "菜单", "退出游戏",
-    };
+    private static final String VID_NINTENDO = "057e";
+    private static final String VID_SONY = "054c";
 
     /**
      * 计算设备分组 key。同类手柄（相同 vid/pid）共用一份映射；
@@ -70,20 +47,36 @@ public class GamepadKeyMap {
         return name != null ? "n_" + name : "default";
     }
 
+    /** 按厂商自动选择预设：Nintendo→switch，Sony→ps，其它→xbox。 */
+    public static String autoPreset(String deviceKey) {
+        if (deviceKey.startsWith(VID_NINTENDO)) {
+            return PRESET_SWITCH;
+        }
+        if (deviceKey.startsWith(VID_SONY)) {
+            return PRESET_PS;
+        }
+        return PRESET_XBOX;
+    }
+
+    /** profile 名是否为手柄预设（决定设置页是否显示物理键名）。 */
+    public static boolean isGamepadPreset(String profileName) {
+        return PRESET_SWITCH.equals(profileName) || PRESET_XBOX.equals(profileName)
+                || PRESET_PS.equals(profileName);
+    }
+
     /**
-     * 物理键显示名（按设备而非预设）：Pro Controller 的键码与键名错位，
-     * 直接显示手柄上印的键名；PS/Xbox 用常见物理名；未知名回退 Generic.kl 标签。
+     * 物理键显示名：按预设族而非设备区分（编辑 switch 预设即显示 Switch 键名）。
+     * Pro Controller 的键码与键名错位，直接显示手柄上印的键名；
+     * 未知名回退 Generic.kl 标签。
      */
-    public static String keyLabel(String deviceKey, int keyCode) {
-        SparseIntArray labels = deviceKey.startsWith("057e")
-                ? switchLabels() : deviceKey.startsWith("054c")
-                ? psLabels() : xboxLabels();
+    public static String labelForPreset(String preset, int keyCode) {
+        SparseIntArray labels = PRESET_SWITCH.equals(preset) ? SWITCH_LABELS
+                : PRESET_PS.equals(preset) ? PS_LABELS : XBOX_LABELS;
         int v = labels.get(keyCode, Integer.MIN_VALUE);
         if (v != Integer.MIN_VALUE) {
             return PHYS_NAMES[v];
         }
-        return nostalgia.framework.ui.preferences.KeyboardSettingsActivity
-                .getKeyLabel(keyCode);
+        return KeyLabels.getKeyLabel(keyCode);
     }
 
     /** 物理键名池：值为 PHYS_NAMES 下标 */
@@ -92,7 +85,7 @@ public class GamepadKeyMap {
             "Home", "Capture", "L3", "R3",
             "×", "○", "△", "□", "Share", "Options", "PS",
             "LB", "RB", "LT", "RT", "View", "Menu", "Xbox",
-            "十字↑", "十字↓", "十字←", "十字→",
+            "Up", "Down", "Left", "Right",
             "L1", "L2", "R1", "R2",
     };
 
@@ -105,6 +98,10 @@ public class GamepadKeyMap {
             P_MENU = 26, P_XBOX = 27,
             P_DUP = 28, P_DDOWN = 29, P_DLEFT = 30, P_DRIGHT = 31,
             P_L1 = 32, P_L2 = 33, P_R1 = 34, P_R2 = 35;
+
+    private static final SparseIntArray SWITCH_LABELS = switchLabels();
+    private static final SparseIntArray PS_LABELS = psLabels();
+    private static final SparseIntArray XBOX_LABELS = xboxLabels();
 
     private static SparseIntArray switchLabels() {
         SparseIntArray m = new SparseIntArray();
@@ -169,78 +166,9 @@ public class GamepadKeyMap {
         m.put(KeyEvent.KEYCODE_DPAD_RIGHT, P_DRIGHT);
     }
 
-    private static SharedPreferences pref(Context context, String deviceKey) {
-        return context.getSharedPreferences(PREF_PREFIX + deviceKey, Context.MODE_PRIVATE);
-    }
-
-    /** 该设备当前选用的预设；未设置时按 vid/pid 自动识别。 */
-    public static String presetFor(Context context, String deviceKey) {
-        String p = pref(context, deviceKey).getString(KEY_PRESET, null);
-        return p != null ? p : autoPreset(deviceKey);
-    }
-
-    public static void setPreset(Context context, String deviceKey, String preset) {
-        pref(context, deviceKey).edit().putString(KEY_PRESET, preset).apply();
-    }
-
-    /** 按厂商自动选择预设：057e=Nintendo→switch，054c=Sony→ps，045e=Microsoft→xbox。 */
-    private static String autoPreset(String deviceKey) {
-        if (deviceKey.startsWith("057e")) {
-            return PRESET_SWITCH;
-        }
-        if (deviceKey.startsWith("054c")) {
-            return PRESET_PS;
-        }
-        return PRESET_XBOX;
-    }
-
-    /** 加载有效映射 = 预设表 + 用户覆盖（-1 条目表示显式解绑）。 */
-    public static SparseIntArray load(Context context, String deviceKey) {
-        SparseIntArray map = presetTable(presetFor(context, deviceKey));
-        SparseIntArray ov = loadOverrides(context, deviceKey);
-        for (int i = 0; i < ov.size(); i++) {
-            int keyCode = ov.keyAt(i);
-            int emu = ov.valueAt(i);
-            if (emu < 0) {
-                map.delete(keyCode);
-            } else {
-                map.put(keyCode, emu);
-            }
-        }
-        return map;
-    }
-
-    /** 仅用户自定义条目（含 -1 解绑标记），不含预设默认值。 */
-    public static SparseIntArray loadOverrides(Context context, String deviceKey) {
-        SparseIntArray map = new SparseIntArray();
-        for (Map.Entry<String, ?> e : pref(context, deviceKey).getAll().entrySet()) {
-            if (e.getValue() instanceof Integer) {
-                try {
-                    map.put(Integer.parseInt(e.getKey()), (Integer) e.getValue());
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-        return map;
-    }
-
-    /** 仅预设表（含方向键内置映射）。 */
-    public static SparseIntArray loadDefaults(Context context, String deviceKey) {
-        return presetTable(presetFor(context, deviceKey));
-    }
-
-    /** 保存单个绑定；emuCode 传 -1 表示解绑该物理键。 */
-    public static void bind(Context context, String deviceKey, int keyCode, int emuCode) {
-        pref(context, deviceKey).edit().putInt(String.valueOf(keyCode), emuCode).apply();
-    }
-
-    /** 清除该设备的全部自定义与预设选择，恢复自动识别默认值。 */
-    public static void reset(Context context, String deviceKey) {
-        pref(context, deviceKey).edit().clear().apply();
-    }
-
     /**
-     * 预设映射表（可被 KeyboardProfile 的同名预设复用，保持单一数据源）。
+     * 预设映射表（KeyboardProfile 预设的单一数据源）。
+     * 每个功能只绑一个物理键（与设置页 1:1 编辑模型一致）；
      * 方向（含斜向）通过十字键 HAT 的 DPAD_* 键码预设，
      * 左摇杆由 KeyboardController 的摇杆转方向逻辑处理。
      */
@@ -255,7 +183,7 @@ public class GamepadKeyMap {
                 // Pro Controller 实测错位表（usage 按报告 bit 序编号）：
                 // A→BUTTON_X B→BUTTON_B X→BUTTON_A Y→BUTTON_C，
                 // R/ZR→L1/R1，-/+→L2/R2，Home→MODE，Capture→THUMBL，
-                // L3→BUTTON_11（L/ZL 无事件，故肩键均不预设，可自行绑定）
+                // L3→BUTTON_11（L/ZL 无事件；肩键/摇杆键不预设，可自行绑定）
                 map.put(KeyEvent.KEYCODE_BUTTON_X, EmulatorController.KEY_A);
                 map.put(KeyEvent.KEYCODE_BUTTON_B, EmulatorController.KEY_B);
                 map.put(KeyEvent.KEYCODE_BUTTON_A, EmulatorController.KEY_A_TURBO);
@@ -263,38 +191,20 @@ public class GamepadKeyMap {
                 map.put(KeyEvent.KEYCODE_BUTTON_L2, EmulatorController.KEY_SELECT);
                 map.put(KeyEvent.KEYCODE_BUTTON_R2, EmulatorController.KEY_START);
                 map.put(KeyEvent.KEYCODE_BUTTON_MODE, KeyboardController.KEY_MENU);
-                map.put(KeyEvent.KEYCODE_BUTTON_THUMBL, KeyboardController.KEY_FAST_FORWARD);
-                map.put(KeyEvent.KEYCODE_BUTTON_11, KeyboardController.KEY_FAST_FORWARD);
+                map.put(KeyEvent.KEYCODE_BUTTON_THUMBL,
+                        KeyboardController.KEY_FAST_FORWARD);
                 break;
             case PRESET_PS:
-                // PS 布局：×=A ○=B △=连发A □=连发B
-                map.put(KeyEvent.KEYCODE_BUTTON_A, EmulatorController.KEY_A);
-                map.put(KeyEvent.KEYCODE_BUTTON_B, EmulatorController.KEY_B);
-                map.put(KeyEvent.KEYCODE_BUTTON_X, EmulatorController.KEY_A_TURBO);
-                map.put(KeyEvent.KEYCODE_BUTTON_Y, EmulatorController.KEY_B_TURBO);
-                map.put(KeyEvent.KEYCODE_BUTTON_L1, EmulatorController.KEY_B);
-                map.put(KeyEvent.KEYCODE_BUTTON_R1, EmulatorController.KEY_A);
-                map.put(KeyEvent.KEYCODE_BUTTON_SELECT, EmulatorController.KEY_SELECT);
-                map.put(KeyEvent.KEYCODE_BUTTON_START, EmulatorController.KEY_START);
-                map.put(KeyEvent.KEYCODE_BUTTON_L2, KeyboardController.KEY_FAST_FORWARD);
-                map.put(KeyEvent.KEYCODE_BUTTON_R2, KeyboardController.KEY_MENU);
-                map.put(KeyEvent.KEYCODE_BUTTON_MODE, KeyboardController.KEY_MENU);
-                break;
             case PRESET_XBOX:
             default:
-                // Xbox/通用布局：A=A B=B X=连发A Y=连发B
+                // PS/Xbox/通用布局：南键=A 东键=B 西键=连发A 北键=连发B
                 map.put(KeyEvent.KEYCODE_BUTTON_A, EmulatorController.KEY_A);
                 map.put(KeyEvent.KEYCODE_BUTTON_B, EmulatorController.KEY_B);
                 map.put(KeyEvent.KEYCODE_BUTTON_X, EmulatorController.KEY_A_TURBO);
                 map.put(KeyEvent.KEYCODE_BUTTON_Y, EmulatorController.KEY_B_TURBO);
-                map.put(KeyEvent.KEYCODE_BUTTON_L1, EmulatorController.KEY_B);
-                map.put(KeyEvent.KEYCODE_BUTTON_R1, EmulatorController.KEY_A);
                 map.put(KeyEvent.KEYCODE_BUTTON_SELECT, EmulatorController.KEY_SELECT);
                 map.put(KeyEvent.KEYCODE_BUTTON_START, EmulatorController.KEY_START);
-                map.put(KeyEvent.KEYCODE_BUTTON_10, EmulatorController.KEY_SELECT);
-                map.put(KeyEvent.KEYCODE_BUTTON_11, EmulatorController.KEY_START);
                 map.put(KeyEvent.KEYCODE_BUTTON_L2, KeyboardController.KEY_FAST_FORWARD);
-                map.put(KeyEvent.KEYCODE_BUTTON_R2, KeyboardController.KEY_MENU);
                 map.put(KeyEvent.KEYCODE_BUTTON_MODE, KeyboardController.KEY_MENU);
                 break;
         }

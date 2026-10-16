@@ -125,7 +125,7 @@ public class SystemHidConnection implements GamepadConnection {
             }
             main.post(() -> {
                 if (proxy != null) {
-                    connectViaProxy(proxy);
+                    connectViaProxy();
                 } else {
                     openProxy();
                 }
@@ -134,8 +134,9 @@ public class SystemHidConnection implements GamepadConnection {
         }
     }
 
-    private void connectViaProxy(BluetoothProfile p) {
-        if (closed) {
+    private void connectViaProxy() {
+        BluetoothProfile p = proxy;
+        if (closed || p == null) {
             return;
         }
         try {
@@ -192,7 +193,7 @@ public class SystemHidConnection implements GamepadConnection {
             @Override
             public void onServiceConnected(int profile, BluetoothProfile p) {
                 proxy = p;
-                connectViaProxy(p);
+                connectViaProxy();
             }
 
             @Override

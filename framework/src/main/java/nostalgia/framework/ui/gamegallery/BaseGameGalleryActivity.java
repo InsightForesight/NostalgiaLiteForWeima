@@ -37,7 +37,6 @@ abstract public class BaseGameGalleryActivity extends ScaledAppCompatActivity
         implements OnRomsFinderListener {
 
     private static final String TAG = "BaseGameGalleryActivity";
-    private static final int REQUEST_SELECT_FILE = 1002;
 
     /** 支持的 ROM 文件扩展名集合 */
     protected Set<String> exts;
@@ -158,53 +157,6 @@ abstract public class BaseGameGalleryActivity extends ScaledAppCompatActivity
             reloading = true;
             romsFinder = new RomsFinder(exts, inZipExts, this, this, uris);
             romsFinder.start();
-        }
-    }
-    
-    /** 打开系统文件选择器，支持多选 */
-    protected void openFilePicker() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("*/*");
-        
-        // Enable multiple file selection
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        
-        String[] mimeTypes = {
-            "application/octet-stream",
-            "application/zip",
-            "application/x-zip-compressed"
-        };
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
-        
-        Intent chooser = Intent.createChooser(intent, getString(R.string.gallery_select_rom_title));
-        startActivityForResult(chooser, REQUEST_SELECT_FILE);
-    }
-    
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_SELECT_FILE && resultCode == RESULT_OK && data != null) {
-            if (data.getClipData() != null) {
-                // Handle multiple file selection
-                ArrayList<Uri> uris = new ArrayList<>();
-                int count = data.getClipData().getItemCount();
-                for (int i = 0; i < count; i++) {
-                    Uri uri = data.getClipData().getItemAt(i).getUri();
-                    if (uri != null) {
-                        uris.add(uri);
-                    }
-                }
-                if (!uris.isEmpty()) {
-                    importRoms(uris);
-                }
-            } else if (data.getData() != null) {
-                // Handle single file selection
-                Uri uri = data.getData();
-                if (uri != null) {
-                    importRom(uri);
-                }
-            }
         }
     }
     
