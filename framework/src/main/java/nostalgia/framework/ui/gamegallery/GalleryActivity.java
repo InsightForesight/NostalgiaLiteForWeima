@@ -162,6 +162,10 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
         } else if (itemId == R.id.gallery_menu_select_rom) {
             openFilePicker();
             return true;
+        } else if (itemId == R.id.gallery_menu_reload) {
+            // 车机无文件管理器，直接全盘扫描存储中的 ROM
+            reloadGames(true, null);
+            return true;
         } else if (itemId == R.id.gallery_menu_exit) {
             finish();
             return true;
@@ -250,7 +254,15 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
         adapter.notifyDataSetChanged();
         // 不再自动搜索ROM，只在首次加载已有游戏
         if (reloadGames && !importing) {
-            reloadGames(false, null);
+            // 车机适配：无文件管理器可用（SAF 缺失），首次启动自动扫描固定 ROM 目录
+            android.content.SharedPreferences carPrefs =
+                    getSharedPreferences("car_adapt", MODE_PRIVATE);
+            if (!carPrefs.getBoolean("auto_scanned", false)) {
+                carPrefs.edit().putBoolean("auto_scanned", true).apply();
+                reloadGames(true, null);
+            } else {
+                reloadGames(false, null);
+            }
         }
     }
 

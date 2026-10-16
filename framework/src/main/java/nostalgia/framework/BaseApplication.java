@@ -5,6 +5,7 @@ import android.app.Application;
 
 import com.blankj.utilcode.util.Utils;
 
+import nostalgia.framework.utils.DensityScaler;
 import nostalgia.framework.utils.EmuUtils;
 import nostalgia.framework.utils.NLog;
 
@@ -22,6 +23,8 @@ abstract public class BaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // 车机 160dpi 屏幕下按 320dpi 渲染，整体放大 UI
+        DensityScaler.install(this);
         // 初始化工具库
         Utils.init(this);
         // 根据是否为调试包设置日志开关

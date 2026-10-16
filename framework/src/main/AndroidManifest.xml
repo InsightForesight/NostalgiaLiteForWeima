@@ -2,6 +2,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="nostalgia.framework">
 
+    <!-- 车机适配：扫描 /sdcard 上的 ROM 需要存储权限，安装后需 pm grant -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />

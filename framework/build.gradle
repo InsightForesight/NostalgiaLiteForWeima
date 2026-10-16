@@ -4,11 +4,11 @@ plugins {
 
 android {
     namespace 'nostalgia.framework'
-    compileSdkVersion 33
+    compileSdkVersion 34
 
     defaultConfig {
-        minSdkVersion 15
-        targetSdkVersion 33
+        minSdkVersion 23
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
     }

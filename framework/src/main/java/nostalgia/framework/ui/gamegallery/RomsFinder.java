@@ -492,12 +492,27 @@ public class RomsFinder extends Thread {
         }
     }
 
+    /** 车机适配：ROM 固定目录（含子目录），避免全盘扫描 */
+    private static final String[] CAR_ROM_DIRS = {
+            "/sdcard/roms",
+            "/mnt/udisk/roms",
+    };
+
     /** 启动文件系统扫描模式 */
     private void startFileSystemMode(ArrayList<GameDescription> oldRoms) {
         HashSet<File> roots = new HashSet<>();
 
         if (selectedFolder == null) {
-            roots = SDCardUtil.getAllStorageLocations();
+            for (String path : CAR_ROM_DIRS) {
+                File dir = new File(path);
+                if (dir.isDirectory() && dir.canRead()) {
+                    roots.add(dir);
+                }
+            }
+            // 车机固定目录不存在就什么都不扫，绝不全盘扫描
+            if (roots.isEmpty()) {
+                NLog.i(TAG, "no car rom dirs found, skip scan");
+            }
         } else {
             roots.add(selectedFolder);
         }
