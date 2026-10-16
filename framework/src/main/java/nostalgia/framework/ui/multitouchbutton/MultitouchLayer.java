@@ -56,6 +56,7 @@ import nostalgia.framework.utils.NLog;
 public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
 
     private static final String TAG = "MultitouchLayer";
+    private static final String LAYOUT_SIG_KEY = "-100";
     private static final int EMPTY_COLOR = 0x00;
     private static final int BUTTON_MIN_SIZE_DP = 20;
     private static final int[] VIDEOMODE_COLORS = new int[]{0xffff8800, 0xff99cc00};
@@ -202,6 +203,8 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
         btnIdMap.add(R.id.button_down_right);
         btnIdMap.add(R.id.button_center);
         btnIdMap.add(R.id.button_fast_forward);
+        btnIdMap.add(R.id.button_exit);
+        btnIdMap.add(R.id.button_reset);
 
         if (!isInEditMode()) {
             initScreenElement(false);
@@ -356,8 +359,12 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
         editElements.add(new EditElement(R.id.button_b, true, buttonMinSizePx).saveHistory());
         editElements.add(new EditElement(R.id.button_a_turbo, true, buttonMinSizePx).saveHistory());
         editElements.add(new EditElement(R.id.button_b_turbo, true, buttonMinSizePx).saveHistory());
-        editElements.add(new EditElement(R.id.button_ab, true, buttonMinSizePx).saveHistory());
-        editElements.add(new EditElement(R.id.button_fast_forward, true, buttonMinSizePx).saveHistory());
+        if (ridToIdxMap.indexOfKey(R.id.button_ab) >= 0) {
+            editElements.add(new EditElement(R.id.button_ab, true, buttonMinSizePx).saveHistory());
+        }
+        if (ridToIdxMap.indexOfKey(R.id.button_fast_forward) >= 0) {
+            editElements.add(new EditElement(R.id.button_fast_forward, true, buttonMinSizePx).saveHistory());
+        }
         EditElement menu = new EditElement(R.id.button_menu, false, buttonMinSizePx).saveHistory();
         menu.setOnClickListener(() -> {
             if (editMode != EDIT_MODE.NONE) {
@@ -1111,7 +1118,21 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
             int id = btnIdMap.indexOf(btn.getId());
             editor.putString(id + "", s);
         }
+        editor.putString(LAYOUT_SIG_KEY, layoutSignature());
         editor.apply();
+    }
+
+    private String layoutSignature() {
+        StringBuilder sb = new StringBuilder();
+        for (View btn : btns) {
+            int id = btnIdMap.indexOf(btn.getId());
+            sb.append(id).append(':')
+                    .append(getRelativeLeft(btn, this)).append(',')
+                    .append(getRelativeTop(btn, this)).append(',')
+                    .append(btn.getMeasuredWidth()).append(',')
+                    .append(btn.getMeasuredHeight()).append(';');
+        }
+        return sb.toString();
     }
 
     private boolean loadEditElements(String unused) {
@@ -1136,8 +1157,9 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
                 }
             }
             pref = getPref();
-            if (pref.getAll().isEmpty()) {
-                NLog.i(TAG, "neni ulozene nastaveni");
+            if (pref.getAll().isEmpty()
+                    || !layoutSignature().equals(pref.getString(LAYOUT_SIG_KEY, ""))) {
+                NLog.i(TAG, "neni ulozene nastaveni nebo se zmenilo rozlozeni");
                 for (EditElement elem : editElements) {
                     elem.computeBoundingBox();
                     elem.computeOffsets();
@@ -1175,7 +1197,7 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
     }
 
     private void checkFastForwardButton() {
-        if (boundingBoxes != null) {
+        if (boundingBoxes != null && ridToIdxMap.indexOfKey(R.id.button_fast_forward) >= 0) {
             int idx = ridToIdxMap.get(R.id.button_fast_forward);
             Rect ff_bb = boundingBoxes[idx];
             //NLog.i(TAG, "fast forward btn " + idx + " rect " + ff_bb);
@@ -1270,7 +1292,7 @@ public class MultitouchLayer extends RelativeLayout implements OnTouchListener {
         private OnEditItemClickListener listener = null;
 
         public EditElement(int rid, boolean movable, float minimalSize) {
-            int idx = ridToIdxMap.get(rid);
+            int idx = ridToIdxMap.indexOfKey(rid) >= 0 ? ridToIdxMap.get(rid) : -1;
 
             if (idx != -1) {
                 ids.add(idx);

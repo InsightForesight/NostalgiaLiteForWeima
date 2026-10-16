@@ -1,10 +1,11 @@
 package nostalgia.framework.ui.preferences;
 
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.KeyEvent;
 
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import nostalgia.framework.GfxProfile;
 import nostalgia.framework.R;
@@ -26,7 +27,7 @@ import nostalgia.framework.utils.DatabaseHelper;
  * 支持重置和保存触摸控制器布局配置。
  * </p>
  */
-public class TouchControllerSettingsActivity extends AppCompatActivity implements
+public class TouchControllerSettingsActivity extends ScaledAppCompatActivity implements
         OnGameMenuListener {
 
     MultitouchLayer mtLayer;
@@ -34,6 +35,7 @@ public class TouchControllerSettingsActivity extends AppCompatActivity implement
     DatabaseHelper dbHelper;
     Bitmap lastGameScreenshot;
     private GameMenu gameMenu;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

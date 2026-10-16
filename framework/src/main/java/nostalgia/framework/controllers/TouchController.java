@@ -42,7 +42,7 @@ public class TouchController implements EmulatorController, OnMultitouchEventLis
     private MultitouchLayer multitouchLayer;
     private ImageView remoteIc, zapperIc, palIc, ntscIc, muteIc;
     private View view;
-    private MultitouchImageButton aTurbo, bTurbo, abButton, fastForward;
+    private View aTurbo, bTurbo, abButton, fastForward;
     private boolean hidden = false;
     private KeyHandler keyHandler = new KeyHandler(this);
 
@@ -88,43 +88,46 @@ public class TouchController implements EmulatorController, OnMultitouchEventLis
                 emulatorActivity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View layout = inflater.inflate(R.layout.controler_layout, null);
         multitouchLayer = layout.findViewById(R.id.touch_layer);
-        MultitouchImageButton up = multitouchLayer.findViewById(R.id.button_up);
+        MultitouchBtnInterface up = multitouchLayer.findViewById(R.id.button_up);
         up.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_up, mapping.get(EmulatorController.KEY_UP));
-        MultitouchImageButton down = multitouchLayer.findViewById(R.id.button_down);
+        MultitouchBtnInterface down = multitouchLayer.findViewById(R.id.button_down);
         down.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_down, mapping.get(EmulatorController.KEY_DOWN));
-        MultitouchImageButton left = multitouchLayer.findViewById(R.id.button_left);
+        MultitouchBtnInterface left = multitouchLayer.findViewById(R.id.button_left);
         left.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_left, mapping.get(EmulatorController.KEY_LEFT));
-        MultitouchImageButton right = multitouchLayer.findViewById(R.id.button_right);
+        MultitouchBtnInterface right = multitouchLayer.findViewById(R.id.button_right);
         right.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_right, mapping.get(EmulatorController.KEY_RIGHT));
-        MultitouchImageButton a = multitouchLayer.findViewById(R.id.button_a);
+        MultitouchBtnInterface a = multitouchLayer.findViewById(R.id.button_a);
         a.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_a, mapping.get(EmulatorController.KEY_A));
-        MultitouchImageButton b = multitouchLayer.findViewById(R.id.button_b);
+        MultitouchBtnInterface b = multitouchLayer.findViewById(R.id.button_b);
         b.setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_b, mapping.get(EmulatorController.KEY_B));
         aTurbo = multitouchLayer.findViewById(R.id.button_a_turbo);
-        aTurbo.setOnMultitouchEventlistener(this);
+        ((MultitouchBtnInterface) aTurbo).setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_a_turbo, mapping.get(EmulatorController.KEY_A_TURBO));
         bTurbo = multitouchLayer.findViewById(R.id.button_b_turbo);
-        bTurbo.setOnMultitouchEventlistener(this);
+        ((MultitouchBtnInterface) bTurbo).setOnMultitouchEventlistener(this);
         resIdMapping.put(R.id.button_b_turbo, mapping.get(EmulatorController.KEY_B_TURBO));
+        // 车机布局移除了 AB 组合键和快进键，保留为空安全处理
         abButton = multitouchLayer.findViewById(R.id.button_ab);
         fastForward = multitouchLayer.findViewById(R.id.button_fast_forward);
-        fastForward.setOnMultitouchEventlistener(new OnMultitouchEventListener() {
-            @Override
-            public void onMultitouchExit(MultitouchBtnInterface btn) {
-                emulatorActivity.onFastForwardUp();
-            }
+        if (fastForward != null) {
+            ((MultitouchBtnInterface) fastForward).setOnMultitouchEventlistener(new OnMultitouchEventListener() {
+                @Override
+                public void onMultitouchExit(MultitouchBtnInterface btn) {
+                    emulatorActivity.onFastForwardUp();
+                }
 
-            @Override
-            public void onMultitouchEnter(MultitouchBtnInterface btn) {
-                emulatorActivity.onFastForwardDown();
-            }
-        });
+                @Override
+                public void onMultitouchEnter(MultitouchBtnInterface btn) {
+                    emulatorActivity.onFastForwardDown();
+                }
+            });
+        }
         MultitouchButton select = layout.findViewById(R.id.button_select);
         if (select != null) {
             select.setOnMultitouchEventlistener(new OnMultitouchEventListener() {
@@ -150,19 +153,50 @@ public class TouchController implements EmulatorController, OnMultitouchEventLis
                 sendKey(EmulatorController.KEY_START);
             }
         });
-        MultitouchImageButton menu = layout.findViewById(R.id.button_menu);
-        menu.setOnMultitouchEventlistener(new OnMultitouchEventListener() {
-            @Override
-            public void onMultitouchExit(MultitouchBtnInterface btn) {
-            }
+        View menu = layout.findViewById(R.id.button_menu);
+        if (menu != null) {
+            ((MultitouchBtnInterface) menu).setOnMultitouchEventlistener(new OnMultitouchEventListener() {
+                @Override
+                public void onMultitouchExit(MultitouchBtnInterface btn) {
+                }
 
-            @Override
-            public void onMultitouchEnter(MultitouchBtnInterface btn) {
-                emulatorActivity.openGameMenu();
-            }
-        });
+                @Override
+                public void onMultitouchEnter(MultitouchBtnInterface btn) {
+                    emulatorActivity.openGameMenu();
+                }
+            });
+        }
+
+        // 车机布局新增：返回游戏列表 / 重置游戏
+        View exit = layout.findViewById(R.id.button_exit);
+        if (exit != null) {
+            ((MultitouchBtnInterface) exit).setOnMultitouchEventlistener(new OnMultitouchEventListener() {
+                @Override
+                public void onMultitouchExit(MultitouchBtnInterface btn) {
+                }
+
+                @Override
+                public void onMultitouchEnter(MultitouchBtnInterface btn) {
+                    emulatorActivity.onTouchExit();
+                }
+            });
+        }
+        View reset = layout.findViewById(R.id.button_reset);
+        if (reset != null) {
+            ((MultitouchBtnInterface) reset).setOnMultitouchEventlistener(new OnMultitouchEventListener() {
+                @Override
+                public void onMultitouchExit(MultitouchBtnInterface btn) {
+                }
+
+                @Override
+                public void onMultitouchEnter(MultitouchBtnInterface btn) {
+                    emulatorActivity.onTouchReset();
+                }
+            });
+        }
         View center = layout.findViewById(R.id.button_center);
-        View[] views = new View[]{menu, select, start, up, down, right, left, a, b, center};
+        View[] views = new View[]{menu, select, start, (View) up, (View) down, (View) right,
+                (View) left, (View) a, (View) b, center, exit, reset};
         for (View view : views) {
             if (view != null) {
                 view.setFocusable(false);
@@ -222,30 +256,27 @@ public class TouchController implements EmulatorController, OnMultitouchEventLis
         remoteIc.setVisibility(remoteVisible ? View.VISIBLE : View.INVISIBLE);
         muteIc.setVisibility(PreferenceUtil.isSoundEnabled(emulatorActivity) ? View.GONE : View.VISIBLE);
 
-        if (PreferenceUtil.isTurboEnabled(emulatorActivity)) {
-            aTurbo.setVisibility(View.VISIBLE);
-            bTurbo.setVisibility(View.VISIBLE);
-            aTurbo.setEnabled(true);
-            bTurbo.setEnabled(true);
+        // 车机版连发键作为固定 AB 第二组常显，不随 turbo 开关隐藏
+        aTurbo.setVisibility(View.VISIBLE);
+        bTurbo.setVisibility(View.VISIBLE);
+        aTurbo.setEnabled(true);
+        bTurbo.setEnabled(true);
 
-        } else {
-            aTurbo.setVisibility(View.INVISIBLE);
-            bTurbo.setVisibility(View.INVISIBLE);
-            aTurbo.setEnabled(false);
-            bTurbo.setEnabled(false);
+        if (fastForward != null) {
+            if (PreferenceUtil.isFastForwardEnabled(emulatorActivity)) {
+                fastForward.setVisibility(View.VISIBLE);
+                fastForward.setEnabled(true);
+
+            } else {
+                fastForward.setVisibility(View.INVISIBLE);
+                fastForward.setEnabled(false);
+            }
         }
 
-        if (PreferenceUtil.isFastForwardEnabled(emulatorActivity)) {
-            fastForward.setVisibility(View.VISIBLE);
-            fastForward.setEnabled(true);
-
-        } else {
-            fastForward.setVisibility(View.INVISIBLE);
-            fastForward.setEnabled(false);
+        if (abButton != null) {
+            abButton.setVisibility(PreferenceUtil.isABButtonEnabled(emulatorActivity) ? View.VISIBLE : View.INVISIBLE);
+            abButton.setEnabled(PreferenceUtil.isABButtonEnabled(emulatorActivity));
         }
-
-        abButton.setVisibility(PreferenceUtil.isABButtonEnabled(emulatorActivity) ? View.VISIBLE : View.INVISIBLE);
-        abButton.setEnabled(PreferenceUtil.isABButtonEnabled(emulatorActivity));
         multitouchLayer.invalidate();
     }
 

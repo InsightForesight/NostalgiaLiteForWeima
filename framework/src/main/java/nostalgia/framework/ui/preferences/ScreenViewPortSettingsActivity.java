@@ -1,10 +1,11 @@
 package nostalgia.framework.ui.preferences;
 
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.KeyEvent;
 
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import nostalgia.framework.GfxProfile;
 import nostalgia.framework.R;
@@ -26,7 +27,7 @@ import nostalgia.framework.utils.DatabaseHelper;
  * 支持重置和保存屏幕布局配置。
  * </p>
  */
-public class ScreenViewPortSettingsActivity extends AppCompatActivity
+public class ScreenViewPortSettingsActivity extends ScaledAppCompatActivity
         implements OnGameMenuListener {
 
     MultitouchLayer mtLayer;
@@ -34,6 +35,7 @@ public class ScreenViewPortSettingsActivity extends AppCompatActivity
     DatabaseHelper dbHelper;
     Bitmap lastGameScreenshot;
     private GameMenu gameMenu;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

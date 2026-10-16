@@ -1,5 +1,6 @@
 package nostalgia.framework.ui;
 
+import android.content.res.Resources;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -18,6 +19,15 @@ import nostalgia.framework.R;
  * </p>
  */
 public class SplashActivity extends Activity {
+
+    // 车机密度适配：AppCompat 会给 Activity 设 overrideConfiguration，
+    // 资源实例与 base context 不同，统一在 getResources 时应用缩放
+    @Override
+    public Resources getResources() {
+        Resources res = super.getResources();
+        nostalgia.framework.utils.DensityScaler.apply(res);
+        return res;
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

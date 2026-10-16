@@ -1,7 +1,8 @@
 package nostalgia.framework.ui.cheats;
 
-import android.app.Dialog;
 import android.content.Context;
+import android.content.res.Resources;
+import android.app.Dialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -14,7 +15,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -30,7 +31,7 @@ import nostalgia.framework.base.EmulatorHolder;
  * 通过 Intent 传入游戏哈希值来关联作弊码数据。
  * </p>
  */
-public class CheatsActivity extends AppCompatActivity {
+public class CheatsActivity extends ScaledAppCompatActivity {
 
     /** Intent 额外参数键：游戏哈希值 */
     public static final String EXTRA_IN_GAME_HASH = "EXTRA_IN_GAME_HASH";
@@ -40,6 +41,7 @@ public class CheatsActivity extends AppCompatActivity {
     private String gameHash;
     private ArrayList<Cheat> cheats;
     private ActionBar actionBar;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -1,15 +1,15 @@
 package nostalgia.framework.ui.gamegallery;
 
+import android.content.res.Resources;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -33,7 +33,7 @@ import nostalgia.framework.utils.NLog;
  * 子类需实现 ROM 扩展名、模拟器 Activity 等具体配置。
  * </p>
  */
-abstract public class BaseGameGalleryActivity extends AppCompatActivity
+abstract public class BaseGameGalleryActivity extends ScaledAppCompatActivity
         implements OnRomsFinderListener {
 
     private static final String TAG = "BaseGameGalleryActivity";
@@ -54,6 +54,7 @@ abstract public class BaseGameGalleryActivity extends AppCompatActivity
     private Intent pendingShareIntent = null;
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

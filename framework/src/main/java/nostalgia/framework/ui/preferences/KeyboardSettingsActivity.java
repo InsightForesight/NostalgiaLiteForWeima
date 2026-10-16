@@ -1,10 +1,11 @@
 package nostalgia.framework.ui.preferences;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnKeyListener;
 import android.content.DialogInterface.OnShowListener;
@@ -31,7 +32,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -51,7 +52,7 @@ import nostalgia.framework.utils.NLog;
  * 支持物理键盘和游戏手柄的按键映射。
  * </p>
  */
-public class KeyboardSettingsActivity extends AppCompatActivity
+public class KeyboardSettingsActivity extends ScaledAppCompatActivity
         implements OnItemClickListener {
 
     public static final String EXTRA_PROFILE_NAME = "EXTRA_PROFILE_NAME";
@@ -134,6 +135,7 @@ public class KeyboardSettingsActivity extends AppCompatActivity
     }
 
     @SuppressWarnings("deprecation")
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

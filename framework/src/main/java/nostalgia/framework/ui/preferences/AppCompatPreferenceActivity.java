@@ -1,5 +1,6 @@
 package nostalgia.framework.ui.preferences;
 
+import android.content.res.Resources;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
@@ -23,6 +24,15 @@ import androidx.appcompat.widget.Toolbar;
 public abstract class AppCompatPreferenceActivity extends PreferenceActivity {
 
     private AppCompatDelegate mDelegate;
+
+    // 车机密度适配：AppCompat 会给 Activity 设 overrideConfiguration，
+    // 资源实例与 base context 不同，统一在 getResources 时应用缩放
+    @Override
+    public Resources getResources() {
+        Resources res = super.getResources();
+        nostalgia.framework.utils.DensityScaler.apply(res);
+        return res;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

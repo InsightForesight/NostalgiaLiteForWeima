@@ -1,7 +1,8 @@
 package nostalgia.framework.ui.gamegallery;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.Resources;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -15,7 +16,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -34,7 +35,7 @@ import nostalgia.framework.utils.NLog;
  * 每个槽位显示截图、日期和时间信息，支持长按弹出操作菜单。
  * </p>
  */
-public class SlotSelectionActivity extends AppCompatActivity {
+public class SlotSelectionActivity extends ScaledAppCompatActivity {
 
     public static final String EXTRA_GAME = "EXTRA_GAME";
     public static final String EXTRA_BASE_DIRECTORY = "EXTRA_BASE_DIR";
@@ -103,6 +104,7 @@ public class SlotSelectionActivity extends AppCompatActivity {
         setResult(RESULT_OK, data);
         finish();
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

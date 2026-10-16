@@ -1,9 +1,10 @@
 package nostalgia.framework.base;
 
+import android.content.res.Resources;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
@@ -55,7 +56,7 @@ import nostalgia.framework.utils.NLog;
  * 子类需提供特定平台的模拟器实例和 OpenGL 片段着色器。
  * </p>
  */
-public abstract class EmulatorActivity extends AppCompatActivity
+public abstract class EmulatorActivity extends ScaledAppCompatActivity
         implements OnGameMenuListener, EmulatorRunner.OnNotRespondingListener {
 
     public static final String EXTRA_GAME = "game";
@@ -111,6 +112,7 @@ public abstract class EmulatorActivity extends AppCompatActivity
     public Manager getManager() {
         return manager;
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -549,6 +551,20 @@ public abstract class EmulatorActivity extends AppCompatActivity
     private void onMenuReset() {
         manager.resetEmulator();
         enableCheats();
+    }
+
+    /** 触屏功能键 - 重置游戏 */
+    public void onTouchReset() {
+        try {
+            onMenuReset();
+        } catch (EmulatorException e) {
+            handleException(e);
+        }
+    }
+
+    /** 触屏功能键 - 返回游戏列表 */
+    public void onTouchExit() {
+        finish();
     }
 
     /** 游戏菜单 - 存档 */

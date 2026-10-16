@@ -1,5 +1,6 @@
 package nostalgia.framework.base;
 
+import android.content.res.Resources;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.Intent;
@@ -25,6 +26,15 @@ public class RestarterActivity extends ComponentActivity {
     public static final String EXTRA_CLASS = "class";
     public static final String EXTRA_AFTER_RESTART = "isAfterRestart";
     RestarterThread thread;
+
+    // 车机密度适配：AppCompat 会给 Activity 设 overrideConfiguration，
+    // 资源实例与 base context 不同，统一在 getResources 时应用缩放
+    @Override
+    public Resources getResources() {
+        Resources res = super.getResources();
+        nostalgia.framework.utils.DensityScaler.apply(res);
+        return res;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

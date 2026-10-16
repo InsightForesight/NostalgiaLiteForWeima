@@ -1,5 +1,6 @@
 package nostalgia.framework.ui.preferences;
 
+import android.content.res.Resources;
 import android.content.pm.PackageInfo;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
@@ -8,7 +9,7 @@ import android.view.MenuItem;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import nostalgia.framework.base.ScaledAppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import nostalgia.framework.R;
@@ -19,10 +20,11 @@ import nostalgia.framework.R;
  * 显示应用版本号和关于信息，支持链接点击。
  * </p>
  */
-public class AboutActivity extends AppCompatActivity {
+public class AboutActivity extends ScaledAppCompatActivity {
 
     private TextView mTextVersion;
     private TextView mTextAbout;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

@@ -46,7 +46,13 @@ public final class DensityScaler {
         });
     }
 
-    private static void apply(Resources res) {
+    /**
+     * 对单个 Resources 应用缩放。
+     * <p>API23 上各 Activity（尤其 AppCompat 设了 overrideConfiguration 后）
+     * 持有独立的 Resources/DisplayMetrics，需在每个 Activity 的
+     * getResources() 中调用。</p>
+     */
+    public static void apply(Resources res) {
         if (res == null) {
             return;
         }

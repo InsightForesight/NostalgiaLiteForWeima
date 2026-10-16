@@ -10,63 +10,68 @@
         android:layout_height="match_parent"
         android:layout_centerVertical="true">
 
-        <RelativeLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
+        <!-- 底部居中功能条：返回 / 重置 / 菜单 + SELECT / START -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="46dp"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="6dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:orientation="vertical"
-                android:padding="4dp">
+            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
+                android:id="@+id/button_exit"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginRight="14dp"
+                android:background="@drawable/button_top_panel_selector"
+                android:padding="8dp"
+                android:src="@drawable/ic_exit" />
 
-                <nostalgia.framework.ui.multitouchbutton.MultitouchButton
-                    android:id="@+id/button_select"
-                    android:layout_width="fill_parent"
-                    android:layout_height="30dp"
-                    android:layout_margin="1dp"
-                    android:background="@drawable/button_top_panel_selector"
-                    android:padding="1dp"
-                    android:text="@string/control_select"
-                    android:textColor="@color/main_color"
-                    android:textSize="14sp" />
-
-                <nostalgia.framework.ui.multitouchbutton.MultitouchButton
-                    android:id="@+id/button_start"
-                    android:layout_width="fill_parent"
-                    android:layout_height="30dp"
-                    android:layout_margin="1dp"
-                    android:background="@drawable/button_top_panel_selector"
-                    android:padding="1dp"
-                    android:text="@string/control_start"
-                    android:textColor="@color/main_color"
-                    android:textSize="14sp" />
-            </LinearLayout>
+            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
+                android:id="@+id/button_reset"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginRight="14dp"
+                android:background="@drawable/button_top_panel_selector"
+                android:padding="8dp"
+                android:src="@drawable/ic_reload" />
 
             <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
                 android:id="@+id/button_menu"
-                android:layout_width="40dp"
-                android:layout_height="30dp"
-                android:layout_alignParentRight="true"
-                android:layout_margin="5dp"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginRight="24dp"
                 android:background="@drawable/button_top_panel_selector"
-                android:padding="1dp"
-                android:src="@drawable/ic_menu"
-                android:text="@string/control_menu"
+                android:padding="8dp"
+                android:src="@drawable/ic_menu" />
+
+            <nostalgia.framework.ui.multitouchbutton.MultitouchButton
+                android:id="@+id/button_select"
+                android:layout_width="96dp"
+                android:layout_height="30dp"
+                android:layout_marginRight="10dp"
+                android:background="@drawable/button_top_panel_selector"
+                android:padding="2dp"
+                android:text="@string/control_select"
                 android:textColor="@color/main_color"
-                android:textSize="14sp" />
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
-            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
-                android:id="@+id/button_fast_forward"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignTop="@+id/button_menu"
-                android:layout_centerHorizontal="true"
-                android:background="@drawable/button_fast_forward_selector" />
+            <nostalgia.framework.ui.multitouchbutton.MultitouchButton
+                android:id="@+id/button_start"
+                android:layout_width="96dp"
+                android:layout_height="30dp"
+                android:background="@drawable/button_top_panel_selector"
+                android:padding="2dp"
+                android:text="@string/control_start"
+                android:textColor="@color/main_color"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-        </RelativeLayout>
-
+        <!-- 方向键：左侧居中 -->
         <FrameLayout
             android:id="@+id/frameLayout1"
             android:layout_width="120dp"
@@ -76,6 +81,7 @@
             <include layout="@layout/dpad" />
         </FrameLayout>
 
+        <!-- AB 键 2x2：右侧居中，上排连发、下排单发 -->
         <LinearLayout
             android:id="@+id/ab_butn_container"
             android:layout_width="wrap_content"
@@ -85,60 +91,52 @@
             android:orientation="vertical"
             android:padding="5dp">
 
-            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
-                android:id="@+id/button_a_turbo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:background="#0000"
-                android:src="@drawable/button_a_turbo_selector" />
-
-            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
-                android:id="@+id/button_a"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_above="@id/button_b"
-                android:layout_gravity="right"
-                android:layout_margin="2dp"
-                android:background="#0000"
-                android:src="@drawable/button_a_selector" />
-
-            <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
-                android:id="@+id/button_b"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_gravity="right"
-                android:layout_marginBottom="2dp"
-                android:background="#0000"
-                android:src="@drawable/button_b_selector" />
-
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <nostalgia.framework.ui.multitouchbutton.MultitouchTwoButton
-                    android:id="@+id/button_ab"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginRight="2dp"
-                    android:background="#0000"
-                    android:src="@drawable/button_ab_selector"
-                    multitouch:first_button="@id/button_a"
-                    multitouch:second_button="@id/button_b" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
                 <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
                     android:id="@+id/button_b_turbo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="right"
+                    android:layout_marginRight="8dp"
                     android:background="#0000"
                     android:src="@drawable/button_b_turbo_selector" />
+
+                <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
+                    android:id="@+id/button_a_turbo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#0000"
+                    android:src="@drawable/button_a_turbo_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
+                    android:id="@+id/button_b"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="8dp"
+                    android:background="#0000"
+                    android:src="@drawable/button_b_selector" />
+
+                <nostalgia.framework.ui.multitouchbutton.MultitouchImageButton
+                    android:id="@+id/button_a"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#0000"
+                    android:src="@drawable/button_a_selector" />
             </LinearLayout>
         </LinearLayout>
     </nostalgia.framework.ui.multitouchbutton.MultitouchLayer>
 
+    <!-- 状态指示图标：左下角竖排 -->
     <LinearLayout
         android:layout_width="20dp"
         android:layout_height="wrap_content"
