@@ -18,8 +18,8 @@ android {
         applicationId "nostalgia.appnes"
         minSdkVersion 23
         targetSdkVersion 28
-        versionCode 1501
-        versionName "1.5.1"
+        versionCode 1502
+        versionName "1.5.2"
         resConfigs "zh"
         ndk {
             abiFilters 'armeabi-v7a'
