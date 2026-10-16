@@ -182,6 +182,8 @@ public class BluetoothGamepadActivity extends ScaledAppCompatActivity
         scanBtn.setOnClickListener(v -> toggleScan());
         findViewById(R.id.bt_disconnect_btn).setOnClickListener(
                 v -> GamepadManager.get().disconnect());
+        findViewById(R.id.bt_keymap_btn).setOnClickListener(
+                v -> startActivity(new Intent(this, GamepadMappingActivity.class)));
 
         IntentFilter f = new IntentFilter();
         f.addAction(BluetoothDevice.ACTION_FOUND);

@@ -139,4 +139,12 @@
     <string name="gallery_play_count">已玩 %d 次</string>
     <string name="gallery_last_played">最后玩过：%s</string>
     <string name="gallery_never_played">从未玩过</string>
+    <string name="gm_title">手柄按键映射</string>
+    <string name="gm_pref_desc">Switch / Xbox / PS 预设方案与逐键自定义</string>
+    <string name="gm_preset_title">按键布局方案</string>
+    <string name="gm_device_label">正在配置：%s</string>
+    <string name="gm_no_device">通用手柄（未检测到手柄连接）</string>
+    <string name="gm_press_key">请按下手柄上要绑定到「%s」的按键</string>
+    <string name="gm_reset_default">恢复默认</string>
+    <string name="bt_key_mapping">按键映射</string>
 </resources>

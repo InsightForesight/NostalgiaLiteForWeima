@@ -2,12 +2,15 @@ package nostalgia.framework.controllers;
 
 import android.content.Context;
 import android.util.SparseIntArray;
+import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 
 import nostalgia.framework.Emulator;
 import nostalgia.framework.EmulatorController;
 import nostalgia.framework.KeyboardProfile;
+import nostalgia.framework.bt.GamepadKeyMap;
 import nostalgia.framework.base.EmulatorActivity;
 import nostalgia.framework.ui.gamegallery.GameDescription;
 import nostalgia.framework.utils.NLog;
@@ -43,12 +46,18 @@ public class KeyboardController implements EmulatorController {
     public static int KEYS_LEFT_AND_DOWN = keysToMultiCode(EmulatorController.KEY_LEFT, EmulatorController.KEY_DOWN);
     public static int KEYS_LEFT_AND_UP = keysToMultiCode(EmulatorController.KEY_LEFT, EmulatorController.KEY_UP);
 
+    /** 摇杆判定为按下的阈值 */
+    private static final float STICK_THRESHOLD = 0.5f;
+
     String gameHash;
     private int[] tmpKeys = new int[2];
+    private final boolean[] stickPressed = new boolean[4]; // left,right,up,down
     private boolean[] loadingOrSaving = new boolean[4];
     private EmulatorActivity emulatorActivity;
     private KeyboardProfile profile;
     private Emulator emulator;
+    private String padMapKey;
+    private SparseIntArray padMap;
     private SparseIntArray keyMapping;
     private Context context;
 
@@ -72,6 +81,8 @@ public class KeyboardController implements EmulatorController {
     @Override
     public void onResume() {
         profile = KeyboardProfile.getSelectedProfile(gameHash, context);
+        padMapKey = null; // 手柄映射缓存失效，设置页改动立即生效
+        padMap = null;
         emulator.resetKeys();
         for (int i = 0; i < loadingOrSaving.length; i++) {
             loadingOrSaving[i] = false;
@@ -99,6 +110,30 @@ public class KeyboardController implements EmulatorController {
         throw new UnsupportedOperationException();
     }
 
+    /** 事件是否来自游戏手柄（而非键盘/其它输入设备）。 */
+    private static boolean isGamepadSource(KeyEvent event) {
+        int src = event.getSource();
+        return (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+    }
+
+    /**
+     * 解析按键映射值：手柄事件走按设备存储的映射表（GamepadKeyMap，
+     * 可在手柄设置页配置），键盘及其它设备走用户选择的 KeyboardProfile。
+     */
+    private int resolveMapValue(int keyCode, KeyEvent event) {
+        if (isGamepadSource(event)) {
+            String key = GamepadKeyMap.deviceKey(event.getDevice());
+            if (padMap == null || !key.equals(padMapKey)) {
+                padMapKey = key;
+                padMap = GamepadKeyMap.load(context, key);
+            }
+            // 手柄事件只查手柄映射表（预设+用户自定义），不混键盘 profile
+            return padMap.get(keyCode, -1);
+        }
+        return profile != null ? profile.keyMap.get(keyCode, -1) : -1;
+    }
+
     private void multiToKeys(int mapValue, int[] keys) {
         mapValue -= 10000;
         int key1 = mapValue / 1000;
@@ -119,7 +154,7 @@ public class KeyboardController implements EmulatorController {
                         keyCode = KEY_XPERIA_CIRCLE;
                     }
                 }
-                if (profile != null && (mapValue = profile.keyMap.get(keyCode, -1)) != -1) {
+                if ((mapValue = resolveMapValue(keyCode, event)) != -1) {
                     processKey(mapValue, true);
                     return true;
                 } else {
@@ -136,7 +171,7 @@ public class KeyboardController implements EmulatorController {
                         keyCode = KEY_XPERIA_CIRCLE;
                     }
                 }
-                if (profile != null && (mapValue = profile.keyMap.get(keyCode, -1)) != -1) {
+                if ((mapValue = resolveMapValue(keyCode, event)) != -1) {
                     processKey(mapValue, false);
                     emulatorActivity.hideTouchController();
                     return true;
@@ -144,7 +179,34 @@ public class KeyboardController implements EmulatorController {
                     return super.onKeyUp(keyCode, event);
                 }
             }
+
+            @Override
+            public boolean onGenericMotionEvent(MotionEvent event) {
+                if ((event.getSource() & InputDevice.SOURCE_JOYSTICK)
+                        != InputDevice.SOURCE_JOYSTICK) {
+                    return super.onGenericMotionEvent(event);
+                }
+                float x = event.getAxisValue(MotionEvent.AXIS_X);
+                float y = event.getAxisValue(MotionEvent.AXIS_Y);
+                processStickAxis(0, x < -STICK_THRESHOLD);
+                processStickAxis(1, x > STICK_THRESHOLD);
+                processStickAxis(2, y < -STICK_THRESHOLD);
+                processStickAxis(3, y > STICK_THRESHOLD);
+                return true;
+            }
         };
+    }
+
+    private static final int[] STICK_KEYS = {EmulatorController.KEY_LEFT,
+            EmulatorController.KEY_RIGHT, EmulatorController.KEY_UP,
+            EmulatorController.KEY_DOWN};
+
+    /** 摇杆方向边沿触发：越过阈值才按下，回到阈值内释放。 */
+    private void processStickAxis(int idx, boolean pressed) {
+        if (stickPressed[idx] != pressed) {
+            stickPressed[idx] = pressed;
+            processKey(STICK_KEYS[idx], pressed);
+        }
     }
 
     /** 处理按键事件，分发到对应的功能（游戏按键、存档、快进、菜单等）。 */

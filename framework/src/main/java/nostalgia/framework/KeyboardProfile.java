@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import nostalgia.framework.bt.GamepadKeyMap;
 import nostalgia.framework.controllers.KeyboardController;
 import nostalgia.framework.utils.NLog;
 
@@ -25,7 +26,7 @@ import nostalgia.framework.utils.NLog;
  */
 public class KeyboardProfile implements Serializable {
     /** 预设配置名称 */
-    public static final String[] DEFAULT_PROFILES_NAMES = {"default", "ps3", "wiimote"};
+    public static final String[] DEFAULT_PROFILES_NAMES = {"default", "switch", "xbox", "ps"};
 
     private static final long serialVersionUID = 5817859819275903370L;
     private static final String KEYBOARD_PROFILES_SETTINGS = "keyboard_profiles_pref";
@@ -65,64 +66,13 @@ public class KeyboardProfile implements Serializable {
     }
 
     /**
-     * 创建 PS3 手柄映射配置。
-     * 方向键=方向，Start/Select=Start/Select，X=A，Y=B，R2=菜单，L2=返回，L1=快进。
+     * 创建手柄预设配置（switch/xbox/ps），键码表与 GamepadKeyMap 预设一致。
      */
     @SuppressLint("InlinedApi")
-    public static KeyboardProfile createPS3Profile() {
+    public static KeyboardProfile createGamepadPresetProfile(String name) {
         KeyboardProfile profile = new KeyboardProfile();
-        profile.name = "ps3";
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_LEFT, EmulatorController.KEY_LEFT);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_RIGHT, EmulatorController.KEY_RIGHT);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_UP, EmulatorController.KEY_UP);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_DOWN, EmulatorController.KEY_DOWN);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_START, EmulatorController.KEY_START);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_SELECT, EmulatorController.KEY_SELECT);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_B, EmulatorController.KEY_A);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_Y, EmulatorController.KEY_B);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_A, EmulatorController.KEY_A_TURBO);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_X, EmulatorController.KEY_B_TURBO);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_R2, KeyboardController.KEY_MENU);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_L2, KeyboardController.KEY_BACK);
-        profile.keyMap.put(KeyEvent.KEYCODE_BUTTON_L1, KeyboardController.KEY_FAST_FORWARD);
-        return profile;
-    }
-
-    /**
-     * 创建 Wii 遥控器映射配置。
-     * 支持双人映射：玩家1使用数字键1/2和方向键，玩家2使用字母键IJKL和OJHM。
-     */
-    public static KeyboardProfile createWiimoteProfile() {
-        KeyboardProfile profile = new KeyboardProfile();
-        profile.name = "wiimote";
-        // 玩家1映射
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_LEFT, EmulatorController.KEY_LEFT);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_RIGHT, EmulatorController.KEY_RIGHT);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_UP, EmulatorController.KEY_UP);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_DOWN, EmulatorController.KEY_DOWN);
-        profile.keyMap.put(KeyEvent.KEYCODE_P, EmulatorController.KEY_START);
-        profile.keyMap.put(KeyEvent.KEYCODE_M, EmulatorController.KEY_SELECT);
-        profile.keyMap.put(KeyEvent.KEYCODE_1, EmulatorController.KEY_B);
-        profile.keyMap.put(KeyEvent.KEYCODE_2, EmulatorController.KEY_A);
-        profile.keyMap.put(KeyEvent.KEYCODE_DPAD_CENTER, KeyboardController.KEY_MENU);
-        profile.keyMap.put(KeyEvent.KEYCODE_H, KeyboardController.KEY_BACK);
-        // 玩家2映射（使用偏移量区分）
-        profile.keyMap.put(KeyEvent.KEYCODE_O,
-                EmulatorController.KEY_LEFT + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_J,
-                EmulatorController.KEY_RIGHT + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_I,
-                EmulatorController.KEY_UP + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_K,
-                EmulatorController.KEY_DOWN + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_PLUS,
-                EmulatorController.KEY_START + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_MINUS,
-                EmulatorController.KEY_SELECT + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_COMMA,
-                EmulatorController.KEY_B + KeyboardController.PLAYER2_OFFSET);
-        profile.keyMap.put(KeyEvent.KEYCODE_PERIOD,
-                EmulatorController.KEY_A + KeyboardController.PLAYER2_OFFSET);
+        profile.name = name;
+        profile.keyMap = GamepadKeyMap.presetTable(name);
         return profile;
     }
 
@@ -165,10 +115,10 @@ public class KeyboardProfile implements Serializable {
             } else {
                 NLog.i(TAG, "empty " + name + KEYBOARD_PROFILE_POSTFIX);
                 switch (name) {
-                    case "ps3":
-                        return createPS3Profile();
-                    case "wiimote":
-                        return createWiimoteProfile();
+                    case "switch":
+                    case "xbox":
+                    case "ps":
+                        return createGamepadPresetProfile(name);
                     default:
                         return createDefaultProfile();
                 }
@@ -224,14 +174,13 @@ public class KeyboardProfile implements Serializable {
     public static void restoreDefaultProfile(String name, Context context) {
         KeyboardProfile prof = null;
         switch (name) {
-            case "ps3":
-                prof = createPS3Profile();
-                break;
             case "default":
                 prof = createDefaultProfile();
                 break;
-            case "wiimote":
-                prof = createWiimoteProfile();
+            case "switch":
+            case "xbox":
+            case "ps":
+                prof = createGamepadPresetProfile(name);
                 break;
         }
         if (prof != null) {

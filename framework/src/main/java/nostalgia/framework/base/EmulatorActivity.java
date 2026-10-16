@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.view.Display;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -262,8 +263,24 @@ public abstract class EmulatorActivity extends ScaledAppCompatActivity
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent ev) {
+        int src = ev.getSource();
+        boolean fromGamepad = (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        if (fromGamepad) {
+            // 手柄按键只进输入控制器管线，避免 Activity 层 MENU/BACK
+            // 等拦截与手柄映射重复消费同一事件
+            inputManager.dispatchKeyEvent(ev);
+            return true;
+        }
         boolean res = super.dispatchKeyEvent(ev);
         inputManager.dispatchKeyEvent(ev);
+        return res;
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent ev) {
+        boolean res = super.dispatchGenericMotionEvent(ev);
+        inputManager.dispatchGenericMotionEvent(ev);
         return res;
     }
 

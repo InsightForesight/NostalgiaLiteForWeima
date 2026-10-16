@@ -114,6 +114,13 @@ public class InputControllerManager {
         }
     }
 
+    /** 分发通用运动事件（手柄摇杆等）到所有控制器视图 */
+    public void dispatchGenericMotionEvent(MotionEvent ev) {
+        for (View controllerView : controllerViews) {
+            controllerView.dispatchGenericMotionEvent(ev);
+        }
+    }
+
     /** 隐藏触摸控制器（如果启用了自动隐藏） */
     public void hideTouchController(boolean autoHide) {
         NLog.i(TAG, "hide controller");

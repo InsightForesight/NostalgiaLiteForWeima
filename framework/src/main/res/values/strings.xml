@@ -186,4 +186,12 @@
     <string name="gallery_delete_confirm_message">This action cannot be undone. Are you sure you want to delete the selected games from your library?</string>
     <string name="delete">Delete</string>
     <string name="selected_games">Selected: %d</string>
+    <string name="gm_title">Gamepad Key Mapping</string>
+    <string name="gm_pref_desc">Switch / Xbox / PlayStation presets and per-key binding</string>
+    <string name="gm_preset_title">Button layout preset</string>
+    <string name="gm_device_label">Configuring: %s</string>
+    <string name="gm_no_device">Generic gamepad (no controller connected)</string>
+    <string name="gm_press_key">Press a button for "%s"</string>
+    <string name="gm_reset_default">Restore defaults</string>
+    <string name="bt_key_mapping">Key Mapping</string>
 </resources>

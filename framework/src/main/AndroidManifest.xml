@@ -59,6 +59,16 @@
         </activity>
 
         <activity
+            android:name=".bt.GamepadMappingActivity"
+            android:label="@string/gm_title">
+            <intent-filter>
+                <action android:name="nostalgia.framework.GAMEPAD_MAPPING" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".ui.preferences.AboutActivity"
             android:theme="@style/AppTheme.NoActionBar" />
 

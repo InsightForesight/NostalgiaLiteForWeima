@@ -38,6 +38,13 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:text="断开连接" />
+
+        <Button
+            android:id="@+id/bt_keymap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:text="@string/bt_key_mapping" />
     </LinearLayout>
 
     <TextView
