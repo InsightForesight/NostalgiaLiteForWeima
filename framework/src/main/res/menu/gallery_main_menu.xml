@@ -16,6 +16,10 @@
         android:title="@string/gallery_menu_reload"
         app:showAsAction="never" />
     <item
+        android:id="@+id/gallery_menu_bt_gamepad"
+        android:title="@string/bt_gamepad_title"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/gallery_menu_select_all"
         android:icon="@drawable/ic_select_all"
         android:title="@string/gallery_menu_select_all"

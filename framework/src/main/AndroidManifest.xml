@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 车机适配：系统蓝牙无 HID host，应用内直连手柄需要蓝牙+定位权限 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="com.android.vending.CHECK_LICENSE" />
 
     <application
@@ -43,6 +47,16 @@
             android:label="Cheats" />
 
         <activity android:name=".base.OpenGLTestActivity" />
+
+        <activity
+            android:name=".bt.BluetoothGamepadActivity"
+            android:label="@string/bt_gamepad_title">
+            <intent-filter>
+                <action android:name="nostalgia.framework.BTGAMEPAD" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".ui.preferences.AboutActivity"

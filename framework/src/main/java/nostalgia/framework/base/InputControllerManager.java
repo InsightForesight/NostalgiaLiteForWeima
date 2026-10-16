@@ -10,6 +10,7 @@ import java.util.List;
 
 import nostalgia.framework.Emulator;
 import nostalgia.framework.EmulatorController;
+import nostalgia.framework.controllers.BtGamepadController;
 import nostalgia.framework.controllers.DynamicDPad;
 import nostalgia.framework.controllers.KeyboardController;
 import nostalgia.framework.controllers.QuickSaveController;
@@ -69,6 +70,11 @@ public class InputControllerManager {
         KeyboardController kc = new KeyboardController(emulator,
                 activity.getApplicationContext(), game.checksum, activity);
         addController(kc);
+
+        // 蓝牙手柄：应用内直连（系统无 HID host），解码后的按键直接喂给模拟器
+        BtGamepadController btc = new BtGamepadController(activity);
+        btc.connectToEmulator(0, emulator);
+        addController(btc);
 
         ZapperGun zapper = new ZapperGun(activity.getApplicationContext(), activity);
         zapper.connectToEmulator(1, emulator);

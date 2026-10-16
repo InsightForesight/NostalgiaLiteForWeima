@@ -89,6 +89,8 @@
     <string name="gallery_menu_wifi_on">WIFI CONTROL ON</string>
     <string name="gallery_menu_wifi_off">WIFI CONTROL OFF</string>
     <string name="gallery_menu_remote_control">REMOTE CONTROLLER</string>
+    <string name="bt_gamepad_title">Bluetooth Gamepad</string>
+    <string name="bt_gamepad_pref_desc">Search, pair and connect a Bluetooth gamepad</string>
     <string name="gallery_menu_reload">SEARCH DEVICE FOR ROMS</string>
     <string name="gallery_zip_search_label">Exploring the zip file.\nWait a minute please.</string>
     <string name="gallery_sdcard_search_label">Searching for ROMs.\nWait a minute please.</string>

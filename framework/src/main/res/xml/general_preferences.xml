@@ -171,6 +171,13 @@
         <Preference
             android:key="pref_game_keyboard_select_input_method"
             android:title="@string/key_profile_select_input_method" />
+
+        <Preference
+            android:key="pref_bt_gamepad"
+            android:summary="@string/bt_gamepad_pref_desc"
+            android:title="@string/bt_gamepad_title">
+            <intent android:action="nostalgia.framework.BTGAMEPAD" />
+        </Preference>
     </PreferenceCategory>
 
     <PreferenceCategory

@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 
 import nostalgia.framework.R;
 import nostalgia.framework.base.EmulatorActivity;
+import nostalgia.framework.bt.BluetoothGamepadActivity;
 import nostalgia.framework.data.GameRepository;
 import nostalgia.framework.ui.gamegallery.GalleryPagerAdapter.OnItemClickListener;
 import nostalgia.framework.ui.preferences.GeneralPreferenceActivity;
@@ -165,6 +166,9 @@ public abstract class GalleryActivity extends BaseGameGalleryActivity
         } else if (itemId == R.id.gallery_menu_reload) {
             // 车机无文件管理器，直接全盘扫描存储中的 ROM
             reloadGames(true, null);
+            return true;
+        } else if (itemId == R.id.gallery_menu_bt_gamepad) {
+            startActivity(new Intent(this, BluetoothGamepadActivity.class));
             return true;
         } else if (itemId == R.id.gallery_menu_exit) {
             finish();

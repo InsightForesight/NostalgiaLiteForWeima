@@ -33,6 +33,8 @@
     <string name="act_cheats_dialog_save">保存</string>
     <string name="app_name">模拟器</string>
     <string name="gallery_menu_pref">设置</string>
+    <string name="bt_gamepad_title">蓝牙手柄</string>
+    <string name="bt_gamepad_pref_desc">搜索、配对并连接蓝牙手柄</string>
     <string name="gallery_menu_reload">在设备上搜索ROM</string>
     <string name="gallery_menu_remote_control">远程控制</string>
     <string name="gallery_menu_wifi_off">打开wifi控制</string>
